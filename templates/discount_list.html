@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Discount Rules Dashboard - Brightloop{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1>Discount Rules Management</h1>
+        <p>Configure fixed or percentage discounts, minimum thresholds, and quota limits.</p>
+    </div>
+    {% if current_user and current_user.is_admin() %}
+    <div class="header-actions">
+        <a href="{{ url_for('discounts.new_discount') }}" class="btn btn-primary">
+            <span>+</span> Create Discount Rule
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Summary Metric Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Total Rules</span>
+            <span class="stat-icon">🏷️</span>
+        </div>
+        <div class="stat-value">{{ total_discounts }}</div>
+        <div class="stat-subtitle">All configured rules</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Active Rules</span>
+            <span class="stat-icon">✅</span>
+        </div>
+        <div class="stat-value revenue">{{ active_discounts }}</div>
+        <div class="stat-subtitle">Ready for application</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Total Redemptions</span>
+            <span class="stat-icon">📊</span>
+        </div>
+        <div class="stat-value subscriptions">{{ total_redemptions }}</div>
+        <div class="stat-subtitle">Times discounts applied</div>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<form method="GET" action="{{ url_for('discounts.list_discounts') }}" class="filter-bar">
+    <div class="filter-group">
+        <label>Scope:</label>
+        <select name="scope" class="form-select" onchange="this.form.submit()">
+            <option value="">All Scopes</option>
+            <option value="subscription" {% if scope_filter == 'subscription' %}selected{% endif %}>Subscription-wide</option>
+            <option value="product" {% if scope_filter == 'product' %}selected{% endif %}>Product-specific</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>Status:</label>
+        <select name="status" class="form-select" onchange="this.form.submit()">
+            <option value="">All Statuses</option>
+            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+            <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+            <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>Expired</option>
+        </select>
+    </div>
+    <div class="filter-group" style="flex: 1;">
+        <input type="text" name="search" class="form-control" placeholder="Search discount name or code..." value="{{ search }}">
+    </div>
+    <button type="submit" class="btn btn-outline">Filter</button>
+    {% if scope_filter or status_filter or search %}
+    <a href="{{ url_for('discounts.list_discounts') }}" class="btn btn-outline">Clear</a>
+    {% endif %}
+</form>
+
+<!-- Discount Rules Table -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">Configured Discount Rules</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Rule Name</th>
+                    <th>Code</th>
+                    <th>Type & Value</th>
+                    <th>Conditions</th>
+                    <th>Validity Period</th>
+                    <th>Usage Quota</th>
+                    <th>Scope</th>
+                    <th>Status</th>
+                    {% if current_user and current_user.is_admin() %}
+                    <th>Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in discounts %}
+                <tr>
+                    <td>
+                        <strong>{{ d.name }}</strong>
+                    </td>
+                    <td>
+                        {% if d.code %}
+                        <code>{{ d.code }}</code>
+                        {% else %}
+                        <span class="text-muted">Auto-applied</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if d.discount_type == 'percentage' %}
+                        <span class="badge badge-info">{{ d.discount_value }}% OFF</span>
+                        {% else %}
+                        <span class="badge badge-success">${{ "{:,.2f}".format(d.discount_value) }} OFF</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <small>
+                            Min Spend: ${{ "{:,.2f}".format(d.min_purchase_amount) }}<br>
+                            Min Qty: {{ d.min_quantity }}
+                        </small>
+                    </td>
+                    <td>
+                        <small>
+                            {{ d.start_date.strftime('%b %d, %Y') }} to<br>
+                            {{ d.end_date.strftime('%b %d, %Y') }}
+                            {% if d.is_expired %}
+                            <span class="badge badge-danger">Expired</span>
+                            {% endif %}
+                        </small>
+                    </td>
+                    <td>
+                        <small>{{ d.current_usage_count }} / {{ d.max_usage_limit if d.max_usage_limit else '∞' }}</small>
+                        {% if d.max_usage_limit %}
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: {{ (d.current_usage_count / d.max_usage_limit * 100)|round }}%;"></div>
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if d.scope == 'product' %}
+                        <span class="badge badge-secondary">Product: {{ d.applicable_product.name if d.applicable_product else 'ID ' ~ d.applicable_product_id }}</span>
+                        {% else %}
+                        <span class="badge badge-info">Subscription-wide</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if not d.is_active %}
+                        <span class="badge badge-secondary">Disabled</span>
+                        {% elif d.is_expired %}
+                        <span class="badge badge-danger">Expired</span>
+                        {% elif d.is_exhausted %}
+                        <span class="badge badge-warning">Exhausted</span>
+                        {% else %}
+                        <span class="badge badge-success">Active</span>
+                        {% endif %}
+                    </td>
+                    {% if current_user and current_user.is_admin() %}
+                    <td>
+                        <div style="display: flex; gap: 0.35rem;">
+                            <a href="{{ url_for('discounts.edit_discount', discount_id=d.id) }}" class="btn btn-outline btn-sm">Edit</a>
+                            <form method="POST" action="{{ url_for('discounts.toggle_discount', discount_id=d.id) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-outline btn-sm">
+                                    {{ "Disable" if d.is_active else "Enable" }}
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                        No discount rules found matching criteria.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

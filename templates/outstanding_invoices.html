@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Outstanding Invoices Tracking - Brightloop{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1>Outstanding Invoices Tracking</h1>
+        <p>Monitor unpaid and partially paid confirmed invoices and their outstanding receivables.</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('tracked_invoices.overdue_invoices') }}" class="btn btn-outline">
+            View Overdue Only
+        </a>
+        <a href="{{ url_for('payments.record_payment') }}" class="btn btn-secondary">
+            <span>+</span> Record Payment
+        </a>
+    </div>
+</div>
+
+<!-- Outstanding Metric Summary -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Total Outstanding Balance</span>
+            <span class="stat-icon">⏳</span>
+        </div>
+        <div class="stat-value outstanding">${{ "{:,.2f}".format(total_outstanding) }}</div>
+        <div class="stat-subtitle">Across {{ invoices|length }} unpaid/partially paid invoices</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<form method="GET" action="{{ url_for('tracked_invoices.outstanding_invoices') }}" class="filter-bar">
+    <div class="filter-group">
+        <label>Customer:</label>
+        <select name="customer_id" class="form-select" onchange="this.form.submit()">
+            <option value="">All Customers</option>
+            {% for c in customers %}
+            <option value="{{ c.id }}" {% if customer_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label>From Date:</label>
+        <input type="date" name="date_from" class="form-control" value="{{ date_from or '' }}">
+    </div>
+    <div class="filter-group">
+        <label>To Date:</label>
+        <input type="date" name="date_to" class="form-control" value="{{ date_to or '' }}">
+    </div>
+    <div class="filter-group" style="flex: 1;">
+        <input type="text" name="search" class="form-control" placeholder="Search invoice # or customer..." value="{{ search }}">
+    </div>
+    <button type="submit" class="btn btn-outline">Filter</button>
+    {% if customer_id or date_from or date_to or search %}
+    <a href="{{ url_for('tracked_invoices.outstanding_invoices') }}" class="btn btn-outline">Reset</a>
+    {% endif %}
+</form>
+
+<!-- Table -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">Outstanding Receivables ({{ invoices|length }})</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Customer</th>
+                    <th>Invoice Date</th>
+                    <th>Due Date</th>
+                    <th>Total Amount</th>
+                    <th>Total Paid</th>
+                    <th>Outstanding Balance</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('tracked_invoices.invoice_detail', invoice_id=inv.id) }}" style="color: var(--primary); text-decoration: underline;">
+                            <strong>{{ inv.invoice_number }}</strong>
+                        </a>
+                    </td>
+                    <td>
+                        {{ inv.customer.name }}<br>
+                        <small style="color: var(--text-muted);">{{ inv.customer.email }}</small>
+                    </td>
+                    <td>{{ inv.invoice_date.strftime('%b %d, %Y') }}</td>
+                    <td>
+                        {{ inv.due_date.strftime('%b %d, %Y') }}
+                        {% if inv.due_date < today %}
+                        <span class="badge badge-danger">Past Due</span>
+                        {% endif %}
+                    </td>
+                    <td>${{ "{:,.2f}".format(inv.total_amount) }}</td>
+                    <td>${{ "{:,.2f}".format(inv.total_paid) }}</td>
+                    <td>
+                        <strong style="color: var(--warning); font-size: 0.95rem;">
+                            ${{ "{:,.2f}".format(inv.outstanding_amount) }}
+                        </strong>
+                    </td>
+                    <td>
+                        {% if inv.payment_status == 'overdue' %}
+                        <span class="badge badge-danger">Overdue</span>
+                        {% elif inv.payment_status == 'partially_paid' %}
+                        <span class="badge badge-warning">Partially Paid</span>
+                        {% else %}
+                        <span class="badge badge-secondary">Unpaid</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('payments.record_payment', invoice_id=inv.id) }}" class="btn btn-secondary btn-sm">
+                            Collect
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                        No outstanding invoices found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
