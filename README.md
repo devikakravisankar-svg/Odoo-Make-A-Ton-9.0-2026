@@ -4,18 +4,18 @@ A modular, enterprise-grade Subscription Management System built with **Python F
 
 ---
 
-## 👥 Team & Module Ownership
+##  Team & Module Ownership
 
 | Member | Role | Assigned Modules & Scope |
 | :--- | :--- | :--- |
 | **Devika K** (Team Lead) | Foundation & Integration | Project factory, MySQL config, Auth, RBAC, Dashboard, Customer Portal, Team Blueprint Integration |
-| **Nidha** | Core Catalog | Product Management, Product Variants, Subscription Plans (`app/blueprints/products/`) |
-| **Sridhya** | Order & Lifecycle | Quotations, Subscriptions lifecycle, Invoices & Line Items (`app/blueprints/subscriptions/`) |
-| **Fairooz** | Finance & Reporting | Discounts/Coupons, Payment transactions, Taxes, Revenue Reports (`app/blueprints/billing/`) |
+| **Nidha Sherin K** | Core Catalog | Product Management, Product Variants, Subscription Plans (`app/blueprints/products/`) |
+| **Sridhya Deleep Kumar** | Order & Lifecycle | Quotations, Subscriptions lifecycle, Invoices & Line Items (`app/blueprints/subscriptions/`) |
+| **Fairooz Faizal Moilingantakath** | Finance & Reporting | Discounts/Coupons, Payment transactions, Taxes, Revenue Reports (`app/blueprints/billing/`) |
 
 ---
 
-## 🏗️ Architecture & Shared Folder Structure
+##  Architecture & Shared Folder Structure
 
 The application adopts the **Application Factory** pattern with modular Flask Blueprints:
 
@@ -74,7 +74,7 @@ Odoo-Make-A-Ton-9.0-2026/
 
 ---
 
-## 🗄️ Shared Database Model Contracts
+##  Shared Database Model Contracts
 
 All members must use these exact field names and types to ensure zero integration friction:
 
@@ -117,7 +117,7 @@ All members must use these exact field names and types to ensure zero integratio
 
 ---
 
-## 🔒 Security & Role-Based Access Control (RBAC)
+##  Security & Role-Based Access Control (RBAC)
 
 ### Password Complexity Rules
 Enforced both via frontend validation and backend validation (`app.utils.validators.validate_password_strength`):
@@ -133,7 +133,7 @@ Enforced both via frontend validation and backend validation (`app.utils.validat
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### 1. Prerequisites
 - Python 3.10+
@@ -194,7 +194,7 @@ Visit: `http://localhost:5000`
 
 ---
 
-## 🧪 Automated Testing
+##  Automated Testing
 
 Run the test suite with verbose output:
 ```bash
@@ -210,7 +210,7 @@ All 21 tests cover:
 
 ---
 
-## 🤝 Teammate Contribution Guidelines
+##  Teammate Contribution Guidelines
 
 1. **Work within your assigned directory**:
    - Nidha: `app/blueprints/products/`
