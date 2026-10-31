@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block title %}Management Dashboard{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--dark-color);">Executive Dashboard</h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">Real-time metrics from the MySQL subscription database</p>
+  </div>
+  {% if current_user.is_admin %}
+    <a href="{{ url_for('dashboard.create_staff') }}" class="btn btn-primary btn-sm">+ Create Staff Account</a>
+  {% endif %}
+</div>
+
+<!-- Key Performance Metrics Cards (Dynamic DB values) -->
+<div class="metrics-grid">
+  <div class="metric-card blue">
+    <div class="metric-label">Total Customers</div>
+    <div class="metric-value">{{ total_customers }}</div>
+    <div class="metric-sub">Registered platform clients</div>
+  </div>
+
+  <div class="metric-card green">
+    <div class="metric-label">Active Subscriptions</div>
+    <div class="metric-value">{{ active_subscriptions }}</div>
+    <div class="metric-sub">Currently running services</div>
+  </div>
+
+  <div class="metric-card green">
+    <div class="metric-label">Revenue Received</div>
+    <div class="metric-value">${{ "%.2f"|format(revenue_received) }}</div>
+    <div class="metric-sub">Total collected payments</div>
+  </div>
+
+  <div class="metric-card amber">
+    <div class="metric-label">Outstanding Invoices</div>
+    <div class="metric-value">{{ outstanding_invoices_count }}</div>
+    <div class="metric-sub">${{ "%.2f"|format(outstanding_invoices_amount) }} pending collection</div>
+  </div>
+
+  <div class="metric-card red">
+    <div class="metric-label">Overdue Invoices</div>
+    <div class="metric-value">{{ overdue_invoices_count }}</div>
+    <div class="metric-sub">Past due date demanding action</div>
+  </div>
+</div>
+
+<!-- Recent Activities Section -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem;">
+  <!-- Recent Subscriptions -->
+  <div class="card">
+    <h2 class="card-title">Recent Subscriptions</h2>
+    {% if recent_subscriptions %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Sub #</th>
+              <th>Customer</th>
+              <th>Status</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sub in recent_subscriptions %}
+              <tr>
+                <td><strong>{{ sub.subscription_number }}</strong></td>
+                <td>{{ sub.customer.full_name }}</td>
+                <td>
+                  <span class="badge {% if sub.status == 'active' %}badge-success{% else %}badge-warning{% endif %}">
+                    {{ sub.status }}
+                  </span>
+                </td>
+                <td>${{ "%.2f"|format(sub.total_amount) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color: var(--text-muted); font-size: 0.9rem;">No subscriptions recorded yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- Recent Invoices -->
+  <div class="card">
+    <h2 class="card-title">Recent Invoices</h2>
+    {% if recent_invoices %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Invoice #</th>
+              <th>Customer</th>
+              <th>Due Date</th>
+              <th>Status</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inv in recent_invoices %}
+              <tr>
+                <td><strong>{{ inv.invoice_number }}</strong></td>
+                <td>{{ inv.customer.full_name }}</td>
+                <td>{{ inv.due_date.strftime('%Y-%m-%d') }}</td>
+                <td>
+                  <span class="badge {% if inv.status == 'paid' %}badge-success{% elif inv.status == 'overdue' %}badge-danger{% else %}badge-warning{% endif %}">
+                    {{ inv.status }}
+                  </span>
+                </td>
+                <td>${{ "%.2f"|format(inv.total_amount) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color: var(--text-muted); font-size: 0.9rem;">No invoices generated yet.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Recent Payment Transactions -->
+<div class="card">
+  <h2 class="card-title">Recent Payments</h2>
+  {% if recent_payments %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Reference</th>
+            <th>Customer</th>
+            <th>Invoice</th>
+            <th>Method</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pay in recent_payments %}
+            <tr>
+              <td><code>{{ pay.payment_reference }}</code></td>
+              <td>{{ pay.customer.full_name }}</td>
+              <td>{{ pay.invoice.invoice_number }}</td>
+              <td>{{ pay.payment_method|upper }}</td>
+              <td><strong>${{ "%.2f"|format(pay.amount) }}</strong></td>
+              <td>
+                <span class="badge {% if pay.status == 'successful' %}badge-success{% else %}badge-danger{% endif %}">
+                  {{ pay.status }}
+                </span>
+              </td>
+              <td>{{ pay.transaction_date.strftime('%Y-%m-%d %H:%M') }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p style="color: var(--text-muted); font-size: 0.9rem;">No payment transactions recorded yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

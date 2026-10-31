@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Browse Products & Subscription Plans{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+  <h1 style="font-size: 1.75rem; font-weight: 700;">Products & Subscription Plans</h1>
+  <p style="color: var(--text-muted); font-size: 0.95rem;">Select from our enterprise offerings tailored for your organization</p>
+</div>
+
+<!-- Subscription Plans Grid -->
+<h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: var(--primary-color);">Available Subscription Plans</h2>
+{% if plans %}
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+    {% for plan in plans %}
+      <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h3 style="font-size: 1.15rem; font-weight: 700;">{{ plan.name }}</h3>
+            <span class="badge badge-info">{{ plan.code }}</span>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">{{ plan.description or 'Comprehensive enterprise cloud features' }}</p>
+          <div style="margin-bottom: 1rem;">
+            <span style="font-size: 1.85rem; font-weight: 800; color: var(--primary-color);">${{ "%.2f"|format(plan.base_price) }}</span>
+            <span style="color: var(--text-muted); font-size: 0.85rem;">/ {{ plan.billing_interval }}</span>
+          </div>
+          {% if plan.trial_days > 0 %}
+            <p style="font-size: 0.8rem; color: var(--success); font-weight: 600; margin-bottom: 1rem;">✓ {{ plan.trial_days }} Days Free Trial included</p>
+          {% endif %}
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="alert('Subscription request initiated! Sridhya\'s Quotation module will generate your order.')">Subscribe to Plan</button>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <p style="color: var(--text-muted);">No subscription plans have been published yet. Please check back shortly.</p>
+  </div>
+{% endif %}
+
+<!-- Products Catalog Grid -->
+<h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: var(--secondary-color);">Product Catalog</h2>
+{% if products %}
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+    {% for prod in products %}
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <h3 style="font-size: 1.1rem; font-weight: 700;">{{ prod.name }}</h3>
+          <span class="badge badge-info">{{ prod.code }}</span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.75rem;">{{ prod.description or 'Odoo enterprise certified software module' }}</p>
+        <p style="font-size: 1.25rem; font-weight: 700; color: var(--dark-color); margin-bottom: 0.75rem;">Starts at ${{ "%.2f"|format(prod.base_price) }}</p>
+
+        {% if prod.variants.all() %}
+          <div style="border-top: 1px solid #f1f5f9; padding-top: 0.5rem; margin-top: 0.5rem;">
+            <p style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.25rem;">Available Variants:</p>
+            <ul style="list-style: none; padding: 0; font-size: 0.8rem;">
+              {% for v in prod.variants.all() %}
+                <li style="display: flex; justify-content: space-between; padding: 0.2rem 0;">
+                  <span>{{ v.name }} ({{ v.sku }})</span>
+                  <strong>${{ "%.2f"|format(v.price) }}</strong>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <p style="color: var(--text-muted);">No catalog items published currently.</p>
+  </div>
+{% endif %}
+{% endblock %}

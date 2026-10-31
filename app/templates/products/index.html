@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Products & Plans Management{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+  <h1 style="font-size: 1.75rem; font-weight: 700;">Product & Subscription Plans Module</h1>
+  <p style="color: var(--text-muted); font-size: 0.95rem;">Module assigned to <strong>Nidha</strong></p>
+</div>
+
+<div class="card">
+  <h2 class="card-title">Products ({{ products|length }})</h2>
+  {% if products %}
+    <ul style="padding-left: 1.5rem;">
+      {% for prod in products %}
+        <li><strong>{{ prod.name }}</strong> ({{ prod.code }}) - Base Price: ${{ "%.2f"|format(prod.base_price) }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p style="color: var(--text-muted);">No products registered yet.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 class="card-title">Subscription Plans ({{ plans|length }})</h2>
+  {% if plans %}
+    <ul style="padding-left: 1.5rem;">
+      {% for plan in plans %}
+        <li><strong>{{ plan.name }}</strong> ({{ plan.code }}) - ${{ "%.2f"|format(plan.base_price) }} / {{ plan.billing_interval }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p style="color: var(--text-muted);">No subscription plans registered yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

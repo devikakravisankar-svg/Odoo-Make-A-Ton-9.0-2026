@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Create Internal Staff Member{% endblock %}
+
+{% block content %}
+<div class="auth-box" style="max-width: 520px; margin: 1.5rem auto;">
+  <div class="auth-header">
+    <h2>Create Staff Account</h2>
+    <p>Grant authorized staff access to manage subscriptions and invoices</p>
+  </div>
+
+  <form method="POST" action="{{ url_for('dashboard.create_staff') }}">
+    <div class="form-group">
+      <label class="form-label" for="full_name">Staff Full Name *</label>
+      <input type="text" id="full_name" name="full_name" class="form-control" required autofocus>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="username">Username *</label>
+      <input type="text" id="username" name="username" class="form-control" required>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="email">Staff Work Email *</label>
+      <input type="email" id="email" name="email" class="form-control" required>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="phone">Phone Number</label>
+      <input type="tel" id="phone" name="phone" class="form-control">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="password-input">Initial Password *</label>
+      <input type="password" id="password-input" name="password" class="form-control" required autocomplete="new-password">
+      
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.6rem 0.8rem; margin-top: 0.5rem; font-size: 0.8rem;">
+        <p style="font-weight: 600; margin-bottom: 0.25rem;">Password Requirements:</p>
+        <ul style="list-style: none; padding: 0; line-height: 1.5;">
+          <li id="req-length" style="color: #dc2626;">✗ More than 8 characters</li>
+          <li id="req-upper" style="color: #dc2626;">✗ At least one uppercase letter</li>
+          <li id="req-lower" style="color: #dc2626;">✗ At least one lowercase letter</li>
+          <li id="req-special" style="color: #dc2626;">✗ At least one special character (!@#$%^&*)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+      <a href="{{ url_for('dashboard.staff_list') }}" class="btn btn-outline" style="flex: 1;">Cancel</a>
+      <button type="submit" class="btn btn-primary" style="flex: 2;">Save Staff Member</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

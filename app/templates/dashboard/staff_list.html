@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Manage Internal Staff{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+  <div>
+    <h1 style="font-size: 1.5rem; font-weight: 700;">Internal Staff Accounts</h1>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">Admin-only management of authorized operational staff</p>
+  </div>
+  <a href="{{ url_for('dashboard.create_staff') }}" class="btn btn-primary btn-sm">+ Add New Staff</a>
+</div>
+
+<div class="card">
+  {% if staff_members %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Full Name</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for member in staff_members %}
+            <tr>
+              <td><strong>{{ member.full_name }}</strong></td>
+              <td>{{ member.username }}</td>
+              <td>{{ member.email }}</td>
+              <td>{{ member.phone or '—' }}</td>
+              <td><span class="role-pill role-staff">staff</span></td>
+              <td>
+                <span class="badge {% if member.is_active %}badge-success{% else %}badge-danger{% endif %}">
+                  {{ 'Active' if member.is_active else 'Disabled' }}
+                </span>
+              </td>
+              <td>{{ member.created_at.strftime('%Y-%m-%d') }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p style="color: var(--text-muted);">No internal staff accounts exist yet. Click above to create one.</p>
+  {% endif %}
+</div>
+{% endblock %}

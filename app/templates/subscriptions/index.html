@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Subscriptions, Quotations & Invoices{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+  <h1 style="font-size: 1.75rem; font-weight: 700;">Subscriptions & Billing Operations</h1>
+  <p style="color: var(--text-muted); font-size: 0.95rem;">Module assigned to <strong>Sridhya</strong></p>
+</div>
+
+<div class="card">
+  <h2 class="card-title">Quotations ({{ quotations|length }})</h2>
+  <p style="color: var(--text-muted); font-size: 0.9rem;">Quotation workflow and subscription proposals.</p>
+</div>
+
+<div class="card">
+  <h2 class="card-title">Subscriptions ({{ subscriptions|length }})</h2>
+  <p style="color: var(--text-muted); font-size: 0.9rem;">Subscription lifecycle management.</p>
+</div>
+
+<div class="card">
+  <h2 class="card-title">Invoices ({{ invoices|length }})</h2>
+  <p style="color: var(--text-muted); font-size: 0.9rem;">Invoice generation and due date tracking.</p>
+</div>
+{% endblock %}

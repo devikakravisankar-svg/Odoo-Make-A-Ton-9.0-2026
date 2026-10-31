@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% block title %}Discounts & Payments{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+  <h1 style="font-size: 1.75rem; font-weight: 700;">Discounts, Payments & Reports</h1>
+  <p style="color: var(--text-muted); font-size: 0.95rem;">Module assigned to <strong>Fairooz</strong></p>
+</div>
+
+<div class="card">
+  <h2 class="card-title">Discounts & Coupon Rules ({{ discounts|length }})</h2>
+  <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">Note: Only Administrators can create new discount rules.</p>
+  {% if discounts %}
+    <ul style="padding-left: 1.5rem;">
+      {% for d in discounts %}
+        <li><code>{{ d.code }}</code> - {{ d.value }}{{ '%' if d.discount_type == 'percentage' else '$' }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p style="color: var(--text-muted);">No discount rules configured.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 class="card-title">Payment Transactions ({{ payments|length }})</h2>
+  <p style="color: var(--text-muted); font-size: 0.9rem;">Payment gateway captures and invoice reconciliation.</p>
+</div>
+
+<div class="card">
+  <h2 class="card-title">Configured Tax Rules ({{ taxes|length }})</h2>
+  {% if taxes %}
+    <ul style="padding-left: 1.5rem;">
+      {% for t in taxes %}
+        <li><strong>{{ t.name }}</strong>: {{ t.rate_percentage }}%</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p style="color: var(--text-muted);">No tax rates configured.</p>
+  {% endif %}
+</div>
+{% endblock %}

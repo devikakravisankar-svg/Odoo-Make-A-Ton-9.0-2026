@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Reset Password{% endblock %}
+
+{% block content %}
+<div class="auth-box">
+  <div class="auth-header">
+    <h2>Reset Password</h2>
+    <p>Enter your registered email address to receive password reset instructions</p>
+  </div>
+
+  <form method="POST" action="{{ url_for('auth.forgot_password') }}">
+    <div class="form-group">
+      <label class="form-label" for="email">Account Email</label>
+      <input type="email" id="email" name="email" class="form-control" required autofocus placeholder="name@company.com">
+      <p class="form-help">A time-limited verification token will be generated.</p>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width: 100%;">Send Reset Instructions</button>
+  </form>
+
+  <p style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem;">
+    Remembered your password? <a href="{{ url_for('auth.login') }}" style="color: var(--primary-color); font-weight: 600;">Return to Sign In</a>
+  </p>
+</div>
+{% endblock %}

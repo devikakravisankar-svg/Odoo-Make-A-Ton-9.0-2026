@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Subscription Management System{% endblock %} - Odoo Make-A-Ton</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="{{ url_for('root') }}" class="navbar-brand">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+      </svg>
+      <span>Odoo</span> Subscriptions
+    </a>
+
+    <ul class="nav-links">
+      {% if current_user.is_authenticated %}
+        {% if current_user.is_admin_or_staff %}
+          <li><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+          <li><a href="{{ url_for('products.index') }}">Products & Plans</a></li>
+          <li><a href="{{ url_for('subscriptions.index') }}">Subscriptions</a></li>
+          <li><a href="{{ url_for('billing.index') }}">Billing & Reports</a></li>
+          {% if current_user.is_admin %}
+            <li><a href="{{ url_for('dashboard.staff_list') }}">Manage Staff</a></li>
+          {% endif %}
+        {% else %}
+          <li><a href="{{ url_for('portal.index') }}">My Portal</a></li>
+          <li><a href="{{ url_for('portal.products') }}">Browse Plans</a></li>
+          <li><a href="{{ url_for('portal.subscriptions') }}">My Subscriptions</a></li>
+          <li><a href="{{ url_for('portal.invoices') }}">My Invoices</a></li>
+          <li><a href="{{ url_for('portal.payments') }}">Payment History</a></li>
+          <li><a href="{{ url_for('portal.profile') }}">Profile</a></li>
+        {% endif %}
+
+        <li>
+          <span class="user-badge">
+            {{ current_user.username }}
+            <span class="role-pill role-{{ current_user.role }}">{{ current_user.role }}</span>
+          </span>
+        </li>
+        <li><a href="{{ url_for('auth.logout') }}" class="btn btn-outline btn-sm" style="color: white; border-color: rgba(255,255,255,0.4);">Sign Out</a></li>
+      {% else %}
+        <li><a href="{{ url_for('auth.login') }}">Sign In</a></li>
+        <li><a href="{{ url_for('auth.register') }}" class="btn btn-secondary btn-sm">Get Started</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="alert-container">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              <span>{{ message }}</span>
+              <button type="button" class="alert-close" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: inherit;">&times;</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>&copy; 2026 Odoo Make-A-Ton 9.0 &bull; Subscription Management System &bull; Team Leader: Devika K</p>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

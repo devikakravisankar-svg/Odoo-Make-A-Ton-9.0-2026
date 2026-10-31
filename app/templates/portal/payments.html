@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Payment History{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+  <h1 style="font-size: 1.75rem; font-weight: 700;">Payment History</h1>
+  <p style="color: var(--text-muted); font-size: 0.95rem;">Review all confirmed transactions for your subscriptions and invoices</p>
+</div>
+
+<div class="card">
+  {% if payments %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Transaction Reference</th>
+            <th>Invoice #</th>
+            <th>Payment Method</th>
+            <th>Amount</th>
+            <th>Date & Time</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pay in payments %}
+            <tr>
+              <td><code>{{ pay.payment_reference }}</code></td>
+              <td>{{ pay.invoice.invoice_number if pay.invoice else 'N/A' }}</td>
+              <td>{{ pay.payment_method|upper }}</td>
+              <td><strong>${{ "%.2f"|format(pay.amount) }}</strong></td>
+              <td>{{ pay.transaction_date.strftime('%Y-%m-%d %H:%M') }}</td>
+              <td>
+                <span class="badge {% if pay.status == 'successful' %}badge-success{% else %}badge-danger{% endif %}">
+                  {{ pay.status }}
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p style="color: var(--text-muted); text-align: center; padding: 2rem 0;">No payment transactions on record yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% block title %}Customer Registration{% endblock %}
+
+{% block content %}
+<div class="auth-box" style="max-width: 500px;">
+  <div class="auth-header">
+    <h2>Create Your Account</h2>
+    <p>Sign up to manage your enterprise subscriptions</p>
+  </div>
+
+  <form method="POST" action="{{ url_for('auth.register') }}">
+    <div class="form-group">
+      <label class="form-label" for="full_name">Full Name *</label>
+      <input type="text" id="full_name" name="full_name" class="form-control" value="{{ full_name or '' }}" required autofocus>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="username">Username *</label>
+      <input type="text" id="username" name="username" class="form-control" value="{{ username or '' }}" required>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="email">Business Email *</label>
+      <input type="email" id="email" name="email" class="form-control" value="{{ email or '' }}" required>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="phone">Phone Number (Optional)</label>
+      <input type="tel" id="phone" name="phone" class="form-control" value="{{ phone or '' }}">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="password-input">Password *</label>
+      <input type="password" id="password-input" name="password" class="form-control" required autocomplete="new-password">
+      
+      <!-- Password requirements feedback -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.6rem 0.8rem; margin-top: 0.5rem; font-size: 0.8rem;">
+        <p style="font-weight: 600; margin-bottom: 0.25rem;">Password Requirements:</p>
+        <ul style="list-style: none; padding: 0; line-height: 1.5;">
+          <li id="req-length" style="color: #dc2626;">✗ More than 8 characters</li>
+          <li id="req-upper" style="color: #dc2626;">✗ At least one uppercase letter</li>
+          <li id="req-lower" style="color: #dc2626;">✗ At least one lowercase letter</li>
+          <li id="req-special" style="color: #dc2626;">✗ At least one special character (!@#$%^&*)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="confirm_password">Confirm Password *</label>
+      <input type="password" id="confirm_password" name="confirm_password" class="form-control" required autocomplete="new-password">
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">Create Customer Account</button>
+  </form>
+
+  <p style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem;">
+    Already have an account? <a href="{{ url_for('auth.login') }}" style="color: var(--primary-color); font-weight: 600;">Sign In</a>
+  </p>
+</div>
+{% endblock %}
