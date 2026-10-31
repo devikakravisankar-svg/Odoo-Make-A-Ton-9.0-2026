@@ -1,0 +1,26 @@
+from functools import wraps
+from flask import session, redirect, url_for, flash, abort, request, jsonify
+from models.user import User
+
+def get_current_user():
+    """Retrieves the currently logged-in user from session, or a default admin in dev mode."""
+    user_id = session.get('user_id')
+    if user_id:
+        return User.query.get(user_id)
+    
+    # In development / demonstration mode, default to the seeded system administrator
+    admin_user = User.query.filter_by(role='admin').first()
+    return admin_user
+
+def admin_required(f):
+    """Decorator to enforce Admin-only operations on backend routes."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user = get_current_user()
+        if not user or not user.is_admin():
+            if request.is_json:
+                return jsonify({'error': 'Admin privileges required for this action.'}), 403
+            flash('Access denied: You must be an administrator to perform this action.', 'danger')
+            return redirect(url_for('discounts.list_discounts'))
+        return f(*args, **kwargs)
+    return decorated_function

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Record Customer Payment - Brightloop{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1>Record Customer Payment</h1>
+        <p>Record and match customer payment receipts against confirmed unpaid invoices.</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('payments.dashboard') }}" class="btn btn-outline">Back to Payments</a>
+    </div>
+</div>
+
+<div class="card" style="max-width: 800px; margin: 0 auto;">
+    <div class="card-header">
+        <span class="card-title">Payment Entry Form</span>
+        <span class="badge badge-secondary">Manual Payment Recording</span>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <!-- Target Invoice Selection -->
+            <div class="form-group">
+                <label for="payment-invoice-select">Select Invoice to Apply Payment *</label>
+                <select id="payment-invoice-select" name="invoice_id" class="form-select" required>
+                    <option value="">-- Choose an unpaid confirmed invoice --</option>
+                    {% for inv in payable_invoices %}
+                    <option value="{{ inv.id }}" {% if preselected_invoice_id == inv.id %}selected{% endif %}>
+                        {{ inv.invoice_number }} — {{ inv.customer.name }} (Outstanding: ${{ "{:,.2f}".format(inv.outstanding_amount) }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <small class="form-text">Only confirmed invoices with an outstanding balance are listed.</small>
+            </div>
+
+            <!-- Dynamic Invoice Details Panel (Updated via Vanilla JS) -->
+            <div id="invoice-balance-details" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius); padding: 1rem; margin-bottom: 1.25rem;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; font-size: 0.85rem;">
+                    <div>
+                        <span style="color: var(--text-muted); display: block;">Customer</span>
+                        <strong id="detail-customer">-</strong>
+                    </div>
+                    <div>
+                        <span style="color: var(--text-muted); display: block;">Due Date</span>
+                        <strong id="detail-due">-</strong>
+                    </div>
+                    <div>
+                        <span style="color: var(--text-muted); display: block;">Invoice Total</span>
+                        <strong id="detail-total">$0.00</strong>
+                    </div>
+                    <div>
+                        <span style="color: var(--text-muted); display: block;">Already Paid</span>
+                        <strong id="detail-paid" style="color: var(--success);">$0.00</strong>
+                    </div>
+                    <div>
+                        <span style="color: var(--text-muted); display: block;">Outstanding Balance</span>
+                        <strong id="detail-outstanding" style="color: var(--danger); font-size: 1.05rem;">$0.00</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overpayment Warning Alert Box -->
+            <div id="overpayment-warning" class="alert alert-danger" style="display: none; margin-bottom: 1rem;"></div>
+
+            <div class="form-grid">
+                <!-- Payment Amount -->
+                <div class="form-group">
+                    <label for="payment-amount-input">Payment Amount ($) *</label>
+                    <input type="number" step="0.01" min="0.01" id="payment-amount-input" name="amount" class="form-control" required placeholder="0.00">
+                    <small class="form-text">Cannot exceed the outstanding balance (overpayment protection).</small>
+                </div>
+
+                <!-- Payment Method -->
+                <div class="form-group">
+                    <label for="payment_method">Payment Method *</label>
+                    <select id="payment_method" name="payment_method" class="form-select" required>
+                        <option value="bank_transfer" selected>Bank Transfer (Wire / NEFT / ACH)</option>
+                        <option value="credit_card">Credit / Debit Card</option>
+                        <option value="stripe">Stripe</option>
+                        <option value="cash">Cash</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="other">Other / Custom</option>
+                    </select>
+                </div>
+
+                <!-- Payment Date -->
+                <div class="form-group">
+                    <label for="payment_date">Payment Date *</label>
+                    <input type="date" id="payment_date" name="payment_date" class="form-control" required value="{{ today }}">
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="form-group">
+                <label for="notes">Reference / Audit Notes (Optional)</label>
+                <textarea id="notes" name="notes" class="form-control" rows="3" placeholder="e.g. Bank transaction reference #TRX-984210, verified against statement"></textarea>
+            </div>
+
+            <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem;">
+                <button type="submit" class="btn btn-secondary">
+                    <span>✓</span> Confirm & Record Payment
+                </button>
+                <a href="{{ url_for('payments.dashboard') }}" class="btn btn-outline">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
