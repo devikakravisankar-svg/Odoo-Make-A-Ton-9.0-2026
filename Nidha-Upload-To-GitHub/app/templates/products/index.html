@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% block title %}Products Management{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--dark-color);">Product Management</h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">Manage catalog products, variants, pricing, and subscription connections &bull; <em>Nidha's Module</em></p>
+  </div>
+  <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+    <a href="{{ url_for('products.plans_list') }}" class="btn btn-outline">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin-right: 4px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+      Subscription Plans
+    </a>
+    <a href="{{ url_for('products.create_product') }}" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin-right: 4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      Add Product
+    </a>
+  </div>
+</div>
+
+<!-- Metrics Cards -->
+<div class="metrics-grid">
+  <div class="metric-card blue">
+    <div class="metric-label">Total Products</div>
+    <div class="metric-value">{{ total_products }}</div>
+    <div class="metric-sub">{{ active_products }} active in catalog</div>
+  </div>
+  <div class="metric-card green">
+    <div class="metric-label">Active Products</div>
+    <div class="metric-value">{{ active_products }}</div>
+    <div class="metric-sub">Available for quotations & sales</div>
+  </div>
+  <div class="metric-card amber">
+    <div class="metric-label">Product Variants</div>
+    <div class="metric-value">{{ total_variants }}</div>
+    <div class="metric-sub">Attributes & pricing tiers</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Subscription Plans</div>
+    <div class="metric-value">{{ total_plans }}</div>
+    <div class="metric-sub">Recurring billing cycles</div>
+  </div>
+</div>
+
+<!-- Filters and Search Bar -->
+<div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+  <form method="GET" action="{{ url_for('products.index') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+    <div style="flex: 2; min-width: 220px;">
+      <label class="form-label" for="search-input">Search Products</label>
+      <input type="text" id="search-input" name="q" value="{{ q or '' }}" class="form-control" placeholder="Search by name, SKU/code, or notes...">
+    </div>
+
+    <div style="flex: 1; min-width: 140px;">
+      <label class="form-label" for="type-select">Product Type</label>
+      <select id="type-select" name="type" class="form-control">
+        <option value="">All Types</option>
+        {% for pt in product_types %}
+          <option value="{{ pt }}" {% if current_type == pt %}selected{% endif %}>{{ pt|capitalize }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="flex: 1; min-width: 140px;">
+      <label class="form-label" for="status-select">Status</label>
+      <select id="status-select" name="status" class="form-control">
+        <option value="">All Statuses</option>
+        {% for st in statuses %}
+          <option value="{{ st }}" {% if current_status == st %}selected{% endif %}>{{ st|capitalize }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="flex: 1; min-width: 140px;">
+      <label class="form-label" for="sort-select">Sort By</label>
+      <select id="sort-select" name="sort" class="form-control">
+        <option value="created_desc" {% if current_sort == 'created_desc' %}selected{% endif %}>Newest First</option>
+        <option value="name_asc" {% if current_sort == 'name_asc' %}selected{% endif %}>Name (A-Z)</option>
+        <option value="price_asc" {% if current_sort == 'price_asc' %}selected{% endif %}>Price: Low to High</option>
+        <option value="price_desc" {% if current_sort == 'price_desc' %}selected{% endif %}>Price: High to Low</option>
+      </select>
+    </div>
+
+    <div style="display: flex; gap: 0.5rem;">
+      <button type="submit" class="btn btn-secondary">Filter</button>
+      {% if q or current_type or current_status or current_sort != 'created_desc' %}
+        <a href="{{ url_for('products.index') }}" class="btn btn-outline">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Products Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div style="padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); background: #fafafa;">
+    <h3 style="font-size: 1rem; font-weight: 600; margin: 0;">Product Catalog ({{ products|length }})</h3>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Code / SKU</th>
+          <th>Product Name</th>
+          <th>Type</th>
+          <th style="text-align: right;">Sales Price</th>
+          <th style="text-align: right;">Cost Price</th>
+          <th style="text-align: right;">Gross Margin</th>
+          <th>Variants</th>
+          <th>Status</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if products %}
+          {% for prod in products %}
+            <tr>
+              <td>
+                <span style="font-family: monospace; font-weight: 600; color: var(--primary-color);">{{ prod.code }}</span>
+              </td>
+              <td>
+                <a href="{{ url_for('products.product_detail', id=prod.id) }}" style="font-weight: 600; color: var(--dark-color); text-decoration: none;">
+                  {{ prod.name }}
+                </a>
+                {% if prod.description %}
+                  <div style="font-size: 0.8rem; color: var(--text-muted); max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ prod.description }}
+                  </div>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge badge-info">{{ prod.product_type|capitalize }}</span>
+              </td>
+              <td style="text-align: right; font-weight: 600;">
+                ₹{{ "%.2f"|format(prod.base_price) }}
+              </td>
+              <td style="text-align: right; color: var(--text-muted);">
+                ₹{{ "%.2f"|format(prod.cost_price) }}
+              </td>
+              <td style="text-align: right;">
+                <span style="font-size: 0.85rem; font-weight: 600; color: {% if prod.gross_margin > 0 %}var(--success){% elif prod.gross_margin < 0 %}var(--danger){% else %}var(--text-muted){% endif %};">
+                  ₹{{ "%.2f"|format(prod.gross_margin) }}
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">({{ prod.margin_percentage }}%)</span>
+                </span>
+              </td>
+              <td>
+                <a href="{{ url_for('products.product_variants', id=prod.id) }}" class="btn btn-outline btn-sm" style="padding: 0.2rem 0.5rem; font-size: 0.8rem;">
+                  {{ prod.variants.count() }} Variant{% if prod.variants.count() != 1 %}s{% endif %}
+                </a>
+              </td>
+              <td>
+                {% if prod.status == 'active' %}
+                  <span class="badge badge-success">Active</span>
+                {% elif prod.status == 'archived' %}
+                  <span class="badge badge-warning">Archived</span>
+                {% else %}
+                  <span class="badge badge-danger">Inactive</span>
+                {% endif %}
+              </td>
+              <td style="text-align: right; white-space: nowrap;">
+                <a href="{{ url_for('products.product_detail', id=prod.id) }}" class="btn btn-outline btn-sm" title="View details">View</a>
+                <a href="{{ url_for('products.edit_product', id=prod.id) }}" class="btn btn-outline btn-sm" title="Edit product">Edit</a>
+                <form method="POST" action="{{ url_for('products.toggle_product_status', id=prod.id) }}" style="display: inline;">
+                  <button type="submit" class="btn btn-outline btn-sm" title="{% if prod.status == 'active' %}Archive{% else %}Reactivate{% endif %}">
+                    {% if prod.status == 'active' %}Archive{% else %}Activate{% endif %}
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 0.5rem; color: #cbd5e1;"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+              <p>No products found matching your filter criteria.</p>
+              <a href="{{ url_for('products.create_product') }}" class="btn btn-primary btn-sm" style="margin-top: 0.5rem;">Add New Product</a>
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

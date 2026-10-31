@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+{% block title %}Variants for {{ product.name }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+      <a href="{{ url_for('products.product_detail', id=product.id) }}" style="color: var(--text-muted); text-decoration: none;">{{ product.name }}</a>
+      <span style="color: var(--text-muted);">&rsaquo;</span>
+      <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--dark-color); margin: 0;">Product Variants</h1>
+    </div>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">
+      Manage attribute options, SKU identifiers, and additional prices for <strong>{{ product.name }}</strong> (Base Price: <strong>?{{ "%.2f"|format(product.base_price) }}</strong>).
+    </p>
+  </div>
+  <a href="{{ url_for('products.product_detail', id=product.id) }}" class="btn btn-outline">&larr; Back to Product</a>
+</div>
+
+<!-- Dynamic Price Calculation Rule Box -->
+<div class="card" style="background: linear-gradient(135deg, #fdfbf7 0%, #f5efe6 100%); border-left: 5px solid var(--primary-color);">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+    <div>
+      <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--primary-color); margin-bottom: 0.4rem;">
+        Final Price Calculation Rule
+      </h3>
+      <p style="font-size: 0.95rem; color: #475569; margin: 0;">
+        <strong>Formula:</strong> <code>Final Price = Base Sales Price + Additional Variant Price</code>
+      </p>
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+        <em>Example: A product with a base price of ?2,000 and an additional variant price of ?560 has a final price of ?2,560.</em>
+      </div>
+    </div>
+
+    <!-- Live Calculator Simulator -->
+    <div style="background: white; border-radius: 8px; padding: 1rem 1.25rem; box-shadow: 0 2px 6px rgba(0,0,0,0.06); min-width: 280px; text-align: center;">
+      <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Calculation Simulator</div>
+      <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin: 0.5rem 0; font-size: 0.95rem;">
+        <span style="font-weight: 600;">?{{ "%.2f"|format(product.base_price) }}</span>
+        <span>+</span>
+        <input type="number" step="0.01" id="sim-variant-price" value="560.00" style="width: 85px; padding: 0.2rem 0.4rem; border: 1px solid var(--border-color); border-radius: 4px; text-align: right; font-weight: 600;">
+        <span>=</span>
+      </div>
+      <div id="sim-final-price" style="font-size: 1.4rem; font-weight: 800; color: var(--primary-color);">
+        ?{{ "%.2f"|format((product.base_price|float) + 560.0) }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+  <!-- Add New Variant Form -->
+  <div class="card">
+    <h3 class="card-title">Add New Variant</h3>
+    <form method="POST" action="{{ url_for('products.create_variant', id=product.id) }}" id="add-variant-form">
+      <div class="form-group">
+        <label class="form-label" for="var-name">Attribute Name <span style="color: var(--danger);">*</span></label>
+        <input type="text" id="var-name" name="variant_name" class="form-control" required placeholder="e.g., Size, Tier, Storage, Edition">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="var-value">Attribute Option / Value <span style="color: var(--danger);">*</span></label>
+        <input type="text" id="var-value" name="variant_value" class="form-control" required placeholder="e.g., Large, Enterprise, 500GB, Pro">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="var-sku">Variant SKU</label>
+        <input type="text" id="var-sku" name="sku" class="form-control" placeholder="Leave empty for auto: {{ product.code }}-VAL" style="text-transform: uppercase;">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="var-add-price">Additional Price (?) <span style="color: var(--danger);">*</span></label>
+        <input type="number" step="0.01" min="0" id="var-add-price" name="additional_price" class="form-control" required value="0.00">
+        <div class="form-help">Amount added on top of base sales price (?{{ "%.2f"|format(product.base_price) }}).</div>
+      </div>
+
+      <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; margin-bottom: 1.25rem; text-align: center;">
+        <span style="font-size: 0.8rem; color: var(--text-muted);">Resulting Final Price:</span>
+        <div id="new-var-preview" style="font-size: 1.2rem; font-weight: 700; color: var(--success);">
+          ?{{ "%.2f"|format(product.base_price) }}
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%;">Create Variant</button>
+    </form>
+  </div>
+
+  <!-- Existing Variants List Table -->
+  <div class="card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 1rem 1.5rem; background: #fafafa; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="font-size: 1rem; font-weight: 600; margin: 0;">Configured Variants ({{ variants|length }})</h3>
+      <span style="font-size: 0.85rem; color: var(--text-muted);">Base: ?{{ "%.2f"|format(product.base_price) }}</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Variant Name</th>
+            <th>SKU</th>
+            <th style="text-align: right;">Base Price</th>
+            <th style="text-align: right;">Additional</th>
+            <th style="text-align: right;">Final Price</th>
+            <th style="text-align: right;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if variants %}
+            {% for var in variants %}
+              <tr>
+                <td>
+                  <strong>{{ var.name }}</strong>
+                  {% if var.variant_name and var.variant_value %}
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">
+                      {{ var.variant_name }}: {{ var.variant_value }}
+                    </div>
+                  {% endif %}
+                </td>
+                <td><span style="font-family: monospace; font-size: 0.85rem;">{{ var.sku }}</span></td>
+                <td style="text-align: right; color: var(--text-muted);">
+                  ?{{ "%.2f"|format(product.base_price) }}
+                </td>
+                <td style="text-align: right; color: var(--primary-color); font-weight: 600;">
+                  +?{{ "%.2f"|format(var.additional_price or var.price or 0.0) }}
+                </td>
+                <td style="text-align: right; font-weight: 700; color: var(--dark-color); font-size: 1.05rem;">
+                  ?{{ "%.2f"|format(var.calculate_final_price()) }}
+                </td>
+                <td style="text-align: right; white-space: nowrap;">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="openEditModal('{{ var.id }}', '{{ var.variant_name or '' }}', '{{ var.variant_value or '' }}', '{{ var.sku }}', '{{ '%.2f'|format(var.additional_price or var.price or 0.0) }}')">
+                    Edit
+                  </button>
+                  <form method="POST" action="{{ url_for('products.delete_variant', id=product.id, variant_id=var.id) }}" style="display: inline;" onsubmit="return confirm('Remove variant {{ var.name }}?');">
+                    <button type="submit" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: var(--danger);">
+                      Delete
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                No variants configured for this product. Use the form on the left to add variant options.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Variant Modal -->
+<div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+  <div style="background: white; border-radius: 8px; max-width: 480px; width: 90%; padding: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+      <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: var(--dark-color);">Edit Variant</h3>
+      <button type="button" onclick="closeEditModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+    </div>
+
+    <form method="POST" id="edit-form" action="">
+      <div class="form-group">
+        <label class="form-label" for="edit-var-name">Attribute Name</label>
+        <input type="text" id="edit-var-name" name="variant_name" class="form-control" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="edit-var-value">Attribute Value</label>
+        <input type="text" id="edit-var-value" name="variant_value" class="form-control" required>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="edit-var-sku">SKU</label>
+        <input type="text" id="edit-var-sku" name="sku" class="form-control" required style="text-transform: uppercase;">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="edit-var-price">Additional Variant Price (?)</label>
+        <input type="number" step="0.01" min="0" id="edit-var-price" name="additional_price" class="form-control" required>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.25rem;">
+        <button type="button" class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const basePrice = {{ product.base_price }};
+
+  // Simulator
+  const simInput = document.getElementById('sim-variant-price');
+  const simFinal = document.getElementById('sim-final-price');
+  if (simInput && simFinal) {
+    simInput.addEventListener('input', () => {
+      const extra = parseFloat(simInput.value) || 0;
+      const total = basePrice + extra;
+      simFinal.textContent = '?' + total.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    });
+  }
+
+  // Add Variant live preview
+  const newAddPrice = document.getElementById('var-add-price');
+  const newPreview = document.getElementById('new-var-preview');
+  if (newAddPrice && newPreview) {
+    newAddPrice.addEventListener('input', () => {
+      const extra = parseFloat(newAddPrice.value) || 0;
+      const total = basePrice + extra;
+      newPreview.textContent = '?' + total.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    });
+  }
+
+  // Modal helpers
+  const editModal = document.getElementById('edit-modal');
+  const editForm = document.getElementById('edit-form');
+  const editName = document.getElementById('edit-var-name');
+  const editValue = document.getElementById('edit-var-value');
+  const editSku = document.getElementById('edit-var-sku');
+  const editPrice = document.getElementById('edit-var-price');
+
+  function openEditModal(varId, vName, vValue, sku, addPrice) {
+    editForm.action = "/products/{{ product.id }}/variants/" + varId + "/edit";
+    editName.value = vName;
+    editValue.value = vValue;
+    editSku.value = sku;
+    editPrice.value = addPrice;
+    editModal.style.display = 'flex';
+  }
+
+  function closeEditModal() {
+    editModal.style.display = 'none';
+  }
+
+  window.onclick = function(event) {
+    if (event.target === editModal) {
+      closeEditModal();
+    }
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% block title %}{% if plan %}Edit Plan: {{ plan.name }}{% else %}Create Subscription Plan{% endif %}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+  <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--dark-color);">
+        {% if plan %}Edit Plan: {{ plan.name }}{% else %}Create Subscription Plan{% endif %}
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        Configure recurring billing frequency, trial windows, quantity limits, and validity dates.
+      </p>
+    </div>
+    <a href="{{ url_for('products.plans_list') }}" class="btn btn-outline">&larr; Back to Plans</a>
+  </div>
+
+  <div class="card">
+    <form method="POST" action="{% if plan %}{{ url_for('products.edit_plan', id=plan.id) }}{% else %}{{ url_for('products.create_plan') }}{% endif %}">
+      
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem;">
+        <div class="form-group">
+          <label class="form-label" for="plan-name">Plan Name <span style="color: var(--danger);">*</span></label>
+          <input type="text" id="plan-name" name="name" class="form-control" required
+                 value="{{ form_data.get('name', plan.name if plan else '') }}" placeholder="e.g., Enterprise Annual Plan">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="plan-code">Plan Code <span style="color: var(--danger);">*</span></label>
+          <input type="text" id="plan-code" name="code" class="form-control" required
+                 value="{{ form_data.get('code', plan.code if plan else '') }}" placeholder="e.g., ENT-ANNUAL" style="text-transform: uppercase;">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+        <div class="form-group">
+          <label class="form-label" for="plan-prod">Associated Base Product</label>
+          <select id="plan-prod" name="product_id" class="form-control">
+            <option value="">? Standalone / Service Plan ?</option>
+            {% for prod in products %}
+              <option value="{{ prod.id }}" {% if form_data.get('product_id', plan.product_id|string if plan and plan.product_id else '') == prod.id|string %}selected{% endif %}>
+                {{ prod.name }} ({{ prod.code }}) - ?{{ "%.2f"|format(prod.base_price) }}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="form-help">Optional link to a core product catalog item.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="plan-status">Status <span style="color: var(--danger);">*</span></label>
+          <select id="plan-status" name="status" class="form-control">
+            {% for st in statuses %}
+              <option value="{{ st }}" {% if form_data.get('status', plan.status if plan else 'active') == st %}selected{% endif %}>
+                {{ st|capitalize }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Billing Cycle & Pricing -->
+      <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem;">
+        <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; color: var(--dark-color);">Billing Cycle & Recurring Pricing</h4>
+        
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 1.25rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="plan-price">Recurring Price (?) <span style="color: var(--danger);">*</span></label>
+            <input type="number" step="0.01" min="0" id="plan-price" name="price" class="form-control" required
+                   value="{{ form_data.get('price', '%.2f'|format(plan.base_price) if plan else '0.00') }}">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="plan-interval">Billing Frequency <span style="color: var(--danger);">*</span></label>
+            <select id="plan-interval" name="billing_interval" class="form-control">
+              {% for intv in intervals %}
+                <option value="{{ intv }}" {% if form_data.get('billing_interval', plan.billing_interval if plan else 'monthly') == intv %}selected{% endif %}>
+                  {{ intv|capitalize }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="plan-trial">Free Trial (Days)</label>
+            <input type="number" min="0" id="plan-trial" name="trial_days" class="form-control"
+                   value="{{ form_data.get('trial_days', plan.trial_days if plan else 0) }}">
+          </div>
+        </div>
+      </div>
+
+      <!-- Quantities & Availability Dates -->
+      <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem;">
+        <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; color: var(--dark-color);">Order Constraints & Availability Dates</h4>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="plan-min-qty">Minimum Quantity <span style="color: var(--danger);">*</span></label>
+            <input type="number" min="1" id="plan-min-qty" name="minimum_quantity" class="form-control" required
+                   value="{{ form_data.get('minimum_quantity', plan.minimum_quantity if plan else 1) }}">
+            <div class="form-help">Minimum order units to subscribe.</div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="plan-start">Availability Start Date <span style="color: var(--danger);">*</span></label>
+            <input type="date" id="plan-start" name="start_date" class="form-control" required
+                   value="{{ form_data.get('start_date', plan.start_date.strftime('%Y-%m-%d') if plan and plan.start_date else '') }}">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="plan-end">Availability End Date</label>
+            <input type="date" id="plan-end" name="end_date" class="form-control"
+                   value="{{ form_data.get('end_date', plan.end_date.strftime('%Y-%m-%d') if plan and plan.end_date else '') }}">
+            <div class="form-help">Leave empty for ongoing validity.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Renewal & Expiry Conditions -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+        <div class="form-group">
+          <label class="form-label" for="plan-renewal">Renewal Setting <span style="color: var(--danger);">*</span></label>
+          <select id="plan-renewal" name="renewal_setting" class="form-control">
+            {% for ren in renewal_settings %}
+              <option value="{{ ren }}" {% if form_data.get('renewal_setting', plan.renewal_setting if plan else 'automatic') == ren %}selected{% endif %}>
+                {{ ren|capitalize }}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="form-help">How subscriptions on this plan renew upon period end.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="plan-closure">Closure Setting <span style="color: var(--danger);">*</span></label>
+          <select id="plan-closure" name="closure_setting" class="form-control">
+            {% for cls in closure_settings %}
+              <option value="{{ cls }}" {% if form_data.get('closure_setting', plan.closure_setting if plan else 'at-period-end') == cls %}selected{% endif %}>
+                {{ cls|capitalize }}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="form-help">When subscription access terminates upon cancellation.</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="plan-desc">Plan Description & Inclusions</label>
+        <textarea id="plan-desc" name="description" class="form-control" rows="3" placeholder="Plan terms, SLA inclusions, or user quota details...">{{ form_data.get('description', plan.description if plan else '') }}</textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+        <a href="{{ url_for('products.plans_list') }}" class="btn btn-outline">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          {% if plan %}Update Plan{% else %}Save Subscription Plan{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

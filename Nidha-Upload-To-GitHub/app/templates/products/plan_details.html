@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}{{ plan.name }} - Plan Details{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+      <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--dark-color); margin: 0;">{{ plan.name }}</h1>
+      <span style="font-family: monospace; font-size: 0.9rem; background: #e2e8f0; padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: 600;">
+        {{ plan.code }}
+      </span>
+      {% if plan.status == 'active' %}
+        {% if plan.is_currently_available() %}
+          <span class="badge badge-success">Active & Available</span>
+        {% else %}
+          <span class="badge badge-warning">Date Inactive</span>
+        {% endif %}
+      {% elif plan.status == 'disabled' %}
+        <span class="badge badge-danger">Disabled</span>
+      {% else %}
+        <span class="badge badge-warning">Archived</span>
+      {% endif %}
+      <span class="badge badge-info">{{ plan.billing_interval|capitalize }}</span>
+    </div>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">
+      Created on {{ plan.created_at.strftime('%d %b %Y, %H:%M') if plan.created_at else '?' }} &bull; Plan ID: #{{ plan.id }}
+    </p>
+  </div>
+
+  <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+    <a href="{{ url_for('subscriptions.index') }}" class="btn btn-secondary" title="Initiate customer subscription for this plan">+ New Subscription</a>
+    <a href="{{ url_for('products.edit_plan', id=plan.id) }}" class="btn btn-primary">Edit Plan</a>
+    <form method="POST" action="{{ url_for('products.toggle_plan_status', id=plan.id) }}" style="display: inline;">
+      <button type="submit" class="btn btn-outline">
+        {% if plan.status == 'active' %}Disable Plan{% else %}Enable Plan{% endif %}
+      </button>
+    </form>
+    <a href="{{ url_for('products.plans_list') }}" class="btn btn-outline">&larr; Back to Plans</a>
+  </div>
+</div>
+
+<!-- Plan Metrics -->
+<div class="metrics-grid">
+  <div class="metric-card blue">
+    <div class="metric-label">Recurring Price</div>
+    <div class="metric-value">?{{ "%.2f"|format(plan.base_price) }}</div>
+    <div class="metric-sub">Billed {{ plan.billing_interval }}</div>
+  </div>
+  <div class="metric-card green">
+    <div class="metric-label">Minimum Quantity</div>
+    <div class="metric-value">{{ plan.minimum_quantity }}</div>
+    <div class="metric-sub">Units required for subscription</div>
+  </div>
+  <div class="metric-card amber">
+    <div class="metric-label">Trial Period</div>
+    <div class="metric-value">{{ plan.trial_days }}</div>
+    <div class="metric-sub">Days free trial</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Active Subscribers</div>
+    <div class="metric-value">{{ plan.subscriptions.count() }}</div>
+    <div class="metric-sub">Enrolled customers</div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+  <div class="card">
+    <h3 class="card-title">Plan Overview & Conditions</h3>
+    {% if plan.description %}
+      <p style="white-space: pre-line; line-height: 1.7; color: #334155;">{{ plan.description }}</p>
+    {% else %}
+      <p style="color: var(--text-muted); font-style: italic;">No detailed description provided.</p>
+    {% endif %}
+
+    <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-color); display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div>
+        <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Renewal Behavior:</span>
+        <div style="font-weight: 600; color: var(--dark-color); margin-top: 2px;">{{ plan.renewal_setting|capitalize }}</div>
+      </div>
+      <div>
+        <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Cancellation Closure:</span>
+        <div style="font-weight: 600; color: var(--dark-color); margin-top: 2px;">{{ plan.closure_setting|capitalize }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="card-title">Availability Period</h3>
+    <div style="margin-bottom: 1rem;">
+      <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Start Date:</span>
+      <div style="font-weight: 600; color: var(--dark-color);">
+        {{ plan.start_date.strftime('%d %B %Y') if plan.start_date else 'Immediate' }}
+      </div>
+    </div>
+
+    <div style="margin-bottom: 1.25rem;">
+      <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">End Date:</span>
+      <div style="font-weight: 600; color: var(--dark-color);">
+        {{ plan.end_date.strftime('%d %B %Y') if plan.end_date else 'Ongoing (No expiration)' }}
+      </div>
+    </div>
+
+    <div style="background: #f8fafc; border-radius: 6px; padding: 0.75rem; border: 1px solid var(--border-color);">
+      <span style="font-size: 0.8rem; color: var(--text-muted);">Current Availability Status:</span>
+      {% if plan.is_currently_available() %}
+        <div style="color: var(--success); font-weight: 700; margin-top: 2px;">&check; Ready for Orders</div>
+      {% else %}
+        <div style="color: var(--danger); font-weight: 700; margin-top: 2px;">&cross; Not Available Today</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

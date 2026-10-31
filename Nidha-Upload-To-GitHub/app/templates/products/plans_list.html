@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% block title %}Subscription Plans Management{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--dark-color);">Subscription Plans</h1>
+    <p style="color: var(--text-muted); font-size: 0.95rem;">
+      Manage recurring billing intervals (daily, weekly, monthly, yearly), availability dates, and minimum quantities.
+    </p>
+  </div>
+  <div style="display: flex; gap: 0.75rem;">
+    <a href="{{ url_for('products.index') }}" class="btn btn-outline">&larr; Products Catalog</a>
+    <a href="{{ url_for('products.create_plan') }}" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin-right: 4px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      Create Plan
+    </a>
+  </div>
+</div>
+
+<!-- Plan Metrics Cards -->
+<div class="metrics-grid">
+  <div class="metric-card blue">
+    <div class="metric-label">Total Plans</div>
+    <div class="metric-value">{{ total_plans }}</div>
+    <div class="metric-sub">{{ active_plans }} currently active</div>
+  </div>
+  <div class="metric-card green">
+    <div class="metric-label">Active Plans</div>
+    <div class="metric-value">{{ active_plans }}</div>
+    <div class="metric-sub">Selectable for subscriptions</div>
+  </div>
+  <div class="metric-card amber">
+    <div class="metric-label">Monthly Plans</div>
+    <div class="metric-value">{{ monthly_plans }}</div>
+    <div class="metric-sub">Standard monthly cycles</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Yearly Plans</div>
+    <div class="metric-value">{{ yearly_plans }}</div>
+    <div class="metric-sub">Annual discounted commitments</div>
+  </div>
+</div>
+
+<!-- Filters Bar -->
+<div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+  <form method="GET" action="{{ url_for('products.plans_list') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+    <div>
+      <span style="font-weight: 600; font-size: 0.9rem; margin-right: 0.5rem; color: var(--dark-color);">Billing Frequency:</span>
+      <a href="{{ url_for('products.plans_list', status=current_status) }}" class="btn btn-sm {% if not current_interval %}btn-primary{% else %}btn-outline{% endif %}">All</a>
+      {% for intv in intervals %}
+        <a href="{{ url_for('products.plans_list', interval=intv, status=current_status) }}" class="btn btn-sm {% if current_interval == intv %}btn-primary{% else %}btn-outline{% endif %}">
+          {{ intv|capitalize }}
+        </a>
+      {% endfor %}
+    </div>
+
+    <div style="margin-left: auto; display: flex; gap: 0.5rem; align-items: center;">
+      <label class="form-label" for="status-filter" style="margin-bottom: 0;">Status:</label>
+      <select id="status-filter" name="status" class="form-control" style="width: auto;" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        {% for st in statuses %}
+          <option value="{{ st }}" {% if current_status == st %}selected{% endif %}>{{ st|capitalize }}</option>
+        {% endfor %}
+      </select>
+      {% if current_interval %}
+        <input type="hidden" name="interval" value="{{ current_interval }}">
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Plans Table -->
+<div class="card" style="padding: 0; overflow: hidden;">
+  <div style="padding: 1rem 1.5rem; background: #fafafa; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+    <h3 style="font-size: 1rem; font-weight: 600; margin: 0;">Plans Directory ({{ plans|length }})</h3>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Plan Name</th>
+          <th>Billing Frequency</th>
+          <th style="text-align: right;">Price</th>
+          <th>Min Quantity</th>
+          <th>Availability Window</th>
+          <th>Renewal & Terms</th>
+          <th>Status</th>
+          <th style="text-align: right;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if plans %}
+          {% for plan in plans %}
+            <tr>
+              <td>
+                <span style="font-family: monospace; font-weight: 600; color: var(--primary-color);">{{ plan.code }}</span>
+              </td>
+              <td>
+                <a href="{{ url_for('products.plan_detail', id=plan.id) }}" style="font-weight: 600; color: var(--dark-color); text-decoration: none;">
+                  {{ plan.name }}
+                </a>
+                {% if plan.product %}
+                  <div style="font-size: 0.8rem; color: var(--text-muted);">
+                    Base Product: <strong>{{ plan.product.name }}</strong>
+                  </div>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge badge-info" style="text-transform: capitalize;">{{ plan.billing_interval }}</span>
+                {% if plan.interval_count > 1 %}
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">(every {{ plan.interval_count }})</span>
+                {% endif %}
+              </td>
+              <td style="text-align: right; font-weight: 700; font-size: 1rem;">
+                ?{{ "%.2f"|format(plan.base_price) }}
+              </td>
+              <td>
+                <span style="font-weight: 600;">{{ plan.minimum_quantity }}</span> unit{% if plan.minimum_quantity != 1 %}s{% endif %}
+              </td>
+              <td>
+                <div style="font-size: 0.85rem;">
+                  <span>From: {{ plan.start_date.strftime('%d %b %Y') if plan.start_date else 'Immediate' }}</span>
+                  <br>
+                  <span style="color: var(--text-muted);">
+                    To: {{ plan.end_date.strftime('%d %b %Y') if plan.end_date else 'Ongoing (No expiry)' }}
+                  </span>
+                </div>
+              </td>
+              <td>
+                <div style="font-size: 0.8rem;">
+                  <span style="color: #475569;">Renewal: <strong>{{ plan.renewal_setting|capitalize }}</strong></span>
+                  <br>
+                  <span style="color: var(--text-muted);">Trial: {{ plan.trial_days }} days</span>
+                </div>
+              </td>
+              <td>
+                {% if plan.status == 'active' %}
+                  {% if plan.is_currently_available() %}
+                    <span class="badge badge-success">Active & Available</span>
+                  {% else %}
+                    <span class="badge badge-warning">Date Inactive</span>
+                  {% endif %}
+                {% elif plan.status == 'disabled' %}
+                  <span class="badge badge-danger">Disabled</span>
+                {% else %}
+                  <span class="badge badge-warning">Archived</span>
+                {% endif %}
+              </td>
+              <td style="text-align: right; white-space: nowrap;">
+                <a href="{{ url_for('products.plan_detail', id=plan.id) }}" class="btn btn-outline btn-sm">View</a>
+                <a href="{{ url_for('products.edit_plan', id=plan.id) }}" class="btn btn-outline btn-sm">Edit</a>
+                <form method="POST" action="{{ url_for('products.toggle_plan_status', id=plan.id) }}" style="display: inline;">
+                  <button type="submit" class="btn btn-outline btn-sm">
+                    {% if plan.status == 'active' %}Disable{% else %}Enable{% endif %}
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+              No subscription plans configured. Click "Create Plan" to define one.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

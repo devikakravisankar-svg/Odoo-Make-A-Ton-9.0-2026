@@ -26,6 +26,7 @@
           <li><a href="{{ url_for('billing.index') }}">Billing & Reports</a></li>
           {% if current_user.is_admin %}
             <li><a href="{{ url_for('dashboard.staff_list') }}">Manage Staff</a></li>
+            <li><a href="{{ url_for('dashboard.discount_list') }}">Discount Rules</a></li>
           {% endif %}
         {% else %}
           <li><a href="{{ url_for('portal.index') }}">My Portal</a></li>

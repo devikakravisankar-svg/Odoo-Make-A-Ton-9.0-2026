@@ -1,10 +1,12 @@
+import uuid
+from datetime import date, datetime, timedelta
 from flask import Blueprint, render_template, request, flash, redirect, url_for, abort
 from flask_login import login_required, current_user
 from app.extensions import db
 from app.models.product import Product
 from app.models.plan import SubscriptionPlan
 from app.models.subscription import Subscription
-from app.models.invoice import Invoice
+from app.models.invoice import Invoice, InvoiceLine
 from app.models.payment import Payment
 from app.utils.validators import validate_password_strength
 
@@ -129,6 +131,126 @@ def invoice_detail(invoice_id):
         flash("Unauthorized access: You can only view your own invoices.", "danger")
         abort(403)
     return render_template('portal/invoice_detail.html', invoice=invoice)
+
+
+@portal_bp.route('/subscribe/<int:plan_id>', methods=['POST'])
+@login_required
+def subscribe(plan_id):
+    """
+    Customer action to subscribe to a selected plan.
+    Creates a real Subscription and an initial pending Invoice in the database.
+    """
+    plan = db.session.get(SubscriptionPlan, plan_id)
+    if not plan or not plan.is_active:
+        flash("The requested subscription plan is not currently available.", "warning")
+        return redirect(url_for('portal.products'))
+
+    # Calculate cycle duration
+    today = date.today()
+    if plan.billing_interval == SubscriptionPlan.INTERVAL_YEARLY:
+        next_billing = today + timedelta(days=365)
+    elif plan.billing_interval == SubscriptionPlan.INTERVAL_QUARTERLY:
+        next_billing = today + timedelta(days=90)
+    elif plan.billing_interval == SubscriptionPlan.INTERVAL_WEEKLY:
+        next_billing = today + timedelta(days=7)
+    else:
+        next_billing = today + timedelta(days=30)
+
+    unique_sub_num = f"SUB-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:4].upper()}"
+
+    subscription = Subscription(
+        subscription_number=unique_sub_num,
+        customer_id=current_user.id,
+        plan_id=plan.id,
+        status=Subscription.STATUS_ACTIVE,
+        start_date=today,
+        next_billing_date=next_billing,
+        auto_renew=True,
+        total_amount=plan.base_price
+    )
+    db.session.add(subscription)
+    db.session.flush()
+
+    # Generate initial invoice
+    unique_inv_num = f"INV-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:4].upper()}"
+    tax_amount = round(float(plan.base_price) * 0.18, 2)
+    total_amount = round(float(plan.base_price) + tax_amount, 2)
+
+    invoice = Invoice(
+        invoice_number=unique_inv_num,
+        customer_id=current_user.id,
+        subscription_id=subscription.id,
+        issue_date=today,
+        due_date=today + timedelta(days=7),
+        status=Invoice.STATUS_PENDING,
+        subtotal=plan.base_price,
+        tax_amount=tax_amount,
+        discount_amount=0.00,
+        total_amount=total_amount,
+        amount_paid=0.00
+    )
+    db.session.add(invoice)
+    db.session.flush()
+
+    # Add invoice line item
+    line = InvoiceLine(
+        invoice_id=invoice.id,
+        description=f"Initial Subscription Fee: {plan.name} ({plan.billing_interval})",
+        quantity=1,
+        unit_price=plan.base_price,
+        line_total=plan.base_price
+    )
+    db.session.add(line)
+    db.session.commit()
+
+    flash(f"Successfully subscribed to {plan.name}! Your initial invoice {invoice.invoice_number} is ready for payment.", "success")
+    return redirect(url_for('portal.subscriptions'))
+
+
+@portal_bp.route('/invoices/<int:invoice_id>/pay', methods=['POST'])
+@login_required
+def pay_invoice(invoice_id):
+    """
+    Process payment for an invoice.
+    Enforces customer isolation and updates invoice status in real-time.
+    """
+    invoice = db.get_or_404(Invoice, invoice_id)
+
+    if invoice.customer_id != current_user.id and not current_user.is_admin_or_staff:
+        flash("Unauthorized payment attempt.", "danger")
+        abort(403)
+
+    if invoice.status == Invoice.STATUS_PAID:
+        flash("This invoice is already paid in full.", "info")
+        return redirect(url_for('portal.invoice_detail', invoice_id=invoice.id))
+
+    payment_method = request.form.get('payment_method', Payment.METHOD_CARD)
+    payment_ref = f"PAY-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+
+    due_balance = float(invoice.balance_due)
+    if due_balance <= 0:
+        due_balance = float(invoice.total_amount)
+
+    payment = Payment(
+        payment_reference=payment_ref,
+        invoice_id=invoice.id,
+        customer_id=current_user.id,
+        amount=due_balance,
+        payment_method=payment_method,
+        status=Payment.STATUS_SUCCESSFUL,
+        transaction_date=datetime.utcnow(),
+        notes=f"Online payment via {payment_method.upper()}"
+    )
+    db.session.add(payment)
+
+    # Update invoice paid balance & status
+    invoice.amount_paid = float(invoice.amount_paid) + due_balance
+    invoice.status = Invoice.STATUS_PAID
+
+    db.session.commit()
+
+    flash(f"Payment of ${due_balance:.2f} processed successfully! Transaction Ref: {payment_ref}", "success")
+    return redirect(url_for('portal.invoice_detail', invoice_id=invoice.id))
 
 
 @portal_bp.route('/payments')

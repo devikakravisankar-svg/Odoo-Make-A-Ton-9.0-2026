@@ -144,3 +144,32 @@ def register_commands(app: Flask):
 
             db.session.commit()
             click.echo("Demo data (taxes, products, plans) seeded successfully.")
+
+    @app.cli.command("check-db")
+    def check_db():
+        """Verifies MySQL database connectivity and PyMySQL driver configuration."""
+        from sqlalchemy import text
+        from urllib.parse import urlparse
+
+        db_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+        # Redact password in logs for security
+        safe_uri = db_uri
+        if '@' in db_uri and ':' in db_uri:
+            prefix = db_uri.split('@')[0]
+            scheme_and_user = prefix.split(':')[0] + ':' + prefix.split(':')[1] if len(prefix.split(':')) > 1 else prefix
+            safe_uri = f"{scheme_and_user}:****@{db_uri.split('@')[1]}"
+
+        click.echo(f"Configured Database URI: {safe_uri}")
+
+        try:
+            with app.app_context():
+                with db.engine.connect() as connection:
+                    result = connection.execute(text("SELECT 1")).scalar()
+                    click.echo("Connection test succeeded: SELECT 1 returned successfully.")
+                    click.echo("MySQL + SQLAlchemy + PyMySQL driver is healthy and functioning properly!")
+        except Exception as e:
+            click.echo(f"\n[ERROR] Unable to connect to database: {e}")
+            click.echo("Troubleshooting tips:")
+            click.echo("1. Ensure your local MySQL server is started (e.g. via Windows Services, XAMPP, or Docker).")
+            click.echo("2. Verify your credentials in .env (MYSQL_USER, MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT, MYSQL_DB).")
+            click.echo("3. Make sure the target database exists in MySQL: CREATE DATABASE subscription_management_db;\n")
