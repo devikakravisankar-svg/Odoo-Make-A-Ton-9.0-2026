@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from app.extensions import db
 
 class SubscriptionPlan(db.Model):
@@ -103,11 +103,73 @@ class SubscriptionPlan(db.Model):
             errors.append(f"Subscription plan '{self.name}' is not currently available for selection.")
         try:
             qty = int(quantity)
-            if qty < self.minimum_quantity:
+            if qty < 1:
+                errors.append("Order quantity must be at least 1.")
+            elif qty < self.minimum_quantity:
                 errors.append(f"Minimum quantity required for plan '{self.name}' is {self.minimum_quantity} (provided: {qty}).")
         except (ValueError, TypeError):
             errors.append("Invalid quantity specified.")
         return (len(errors) == 0, errors)
+
+    def calculate_next_billing_date(self, start_date=None) -> date:
+        """
+        Calculate the next recurring billing date based on billing_interval and interval_count.
+        Supports daily, weekly, monthly, quarterly, and yearly.
+        """
+        if start_date is None:
+            start_date = date.today()
+        elif isinstance(start_date, datetime):
+            start_date = start_date.date()
+        elif isinstance(start_date, str):
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+
+        count = max(1, self.interval_count or 1)
+        interval = (self.billing_interval or self.INTERVAL_MONTHLY).lower()
+
+        if interval == self.INTERVAL_DAILY:
+            return start_date + timedelta(days=1 * count)
+        elif interval == self.INTERVAL_WEEKLY:
+            return start_date + timedelta(weeks=1 * count)
+        elif interval == self.INTERVAL_QUARTERLY:
+            return start_date + timedelta(days=91 * count)
+        elif interval == self.INTERVAL_YEARLY:
+            try:
+                return start_date.replace(year=start_date.year + count)
+            except ValueError:
+                return start_date + timedelta(days=365 * count)
+        else:  # default monthly
+            year = start_date.year
+            month = start_date.month + count
+            while month > 12:
+                year += 1
+                month -= 12
+            day = min(start_date.day, 28)
+            return date(year, month, day)
+
+    def validate_for_order(self, quantity=1, order_date=None):
+        """
+        Detailed validation for quotation and subscription creation.
+        Returns a dictionary with validation state, error messages, and computed totals.
+        """
+        is_valid, errors = self.validate_subscription(quantity=quantity, target_date=order_date)
+        qty = max(1, int(quantity)) if isinstance(quantity, (int, str)) and str(quantity).isdigit() else 1
+        unit_price = float(self.base_price or 0.0)
+        total_amount = round(unit_price * qty, 2)
+        next_billing = self.calculate_next_billing_date(start_date=order_date)
+
+        return {
+            'valid': is_valid,
+            'errors': errors,
+            'plan_id': self.id,
+            'plan_name': self.name,
+            'plan_code': self.code,
+            'billing_interval': self.billing_interval,
+            'unit_price': unit_price,
+            'quantity': qty,
+            'total_amount': total_amount,
+            'trial_days': self.trial_days or 0,
+            'next_billing_date': next_billing.strftime('%Y-%m-%d')
+        }
 
     def to_dict(self):
         return {

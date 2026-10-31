@@ -75,6 +75,20 @@ class Product(db.Model):
             return round(base + extra, 2)
         return round(base, 2)
 
+    def calculate_line_total(self, variant_id=None, quantity=1):
+        """
+        Calculate the total price for a quotation or invoice line item.
+        Formula: Unit Price (Base + Variant Price) * Quantity.
+        Validates quantity >= 1.
+        """
+        qty = max(1, int(quantity))
+        unit_price = self.calculate_price(variant_id=variant_id)
+        return round(unit_price * qty, 2)
+
+    def get_active_variants(self):
+        """Return only active variants for quotation line item pickers."""
+        return self.variants.filter_by(is_active=True).all()
+
     def to_dict(self, include_variants=True):
         data = {
             'id': self.id,

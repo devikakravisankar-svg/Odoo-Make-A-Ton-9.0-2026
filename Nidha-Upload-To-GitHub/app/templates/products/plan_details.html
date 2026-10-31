@@ -28,6 +28,7 @@
   </div>
 
   <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+    <a href="{{ url_for('subscriptions.index') }}" class="btn btn-secondary" title="Initiate customer subscription for this plan">+ New Subscription</a>
     <a href="{{ url_for('products.edit_plan', id=plan.id) }}" class="btn btn-primary">Edit Plan</a>
     <form method="POST" action="{{ url_for('products.toggle_plan_status', id=plan.id) }}" style="display: inline;">
       <button type="submit" class="btn btn-outline">

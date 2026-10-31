@@ -196,7 +196,7 @@ def test_products_web_crud_and_search(client, app, staff_user):
     assert b"Final Price" in res.data
 
     with app.app_context():
-        p = Product.query.get(p_id)
+        p = db.session.get(Product, p_id)
         assert p.variants.count() == 1
         var = p.variants.first()
         assert var.calculate_final_price() == 1900.00
@@ -215,7 +215,7 @@ def test_products_web_crud_and_search(client, app, staff_user):
     assert res.status_code == 200
 
     with app.app_context():
-        p = Product.query.get(p_id)
+        p = db.session.get(Product, p_id)
         assert p.name == 'CRM Automation Pack Pro'
         assert p.base_price == Decimal('1600.00')
 
@@ -229,7 +229,7 @@ def test_products_web_crud_and_search(client, app, staff_user):
     assert res.status_code == 200
 
     with app.app_context():
-        p = Product.query.get(p_id)
+        p = db.session.get(Product, p_id)
         assert p.status == Product.STATUS_ARCHIVED
         assert p.is_active is False
 
@@ -276,7 +276,7 @@ def test_subscription_plans_web_crud(client, app, staff_user):
     assert res.status_code == 200
 
     with app.app_context():
-        plan = SubscriptionPlan.query.get(plan_id)
+        plan = db.session.get(SubscriptionPlan, plan_id)
         assert plan.status == SubscriptionPlan.STATUS_DISABLED
         assert plan.is_active is False
 
@@ -384,3 +384,120 @@ def test_access_control(client, customer_user):
     client.post('/login', data={'login_id': 'customer_test', 'password': 'Cust@Test2026!'})
     res = client.get('/products/')
     assert res.status_code == 403
+
+
+# ==============================================================================
+# 8. QUOTATIONS & SUBSCRIPTIONS INTEGRATION CONNECTIONS
+# ==============================================================================
+
+def test_quotation_line_calculation(app):
+    with app.app_context():
+        prod = Product(name="Enterprise Server", code="SRV-ENT", base_price=2000.00, cost_price=1200.00)
+        db.session.add(prod)
+        db.session.flush()
+
+        variant = ProductVariant(
+            product_id=prod.id,
+            name="1TB NVMe Storage",
+            variant_name="Storage",
+            variant_value="1TB",
+            sku="SRV-1TB",
+            additional_price=560.00
+        )
+        db.session.add(variant)
+        db.session.commit()
+
+        # 1 unit without variant: 2000 * 1 = 2000
+        assert prod.calculate_line_total(quantity=1) == 2000.00
+
+        # 3 units with variant: (2000 + 560) * 3 = 2560 * 3 = 7680
+        assert prod.calculate_line_total(variant_id=variant.id, quantity=3) == 7680.00
+
+        # Active variants picker helper
+        active_vars = prod.get_active_variants()
+        assert len(active_vars) == 1
+        assert active_vars[0].sku == "SRV-1TB"
+
+
+def test_next_billing_date_calculation(app):
+    with app.app_context():
+        ref_date = date(2026, 10, 31)
+
+        daily = SubscriptionPlan(name="P-Daily", code="P-D", billing_interval="daily", base_price=10.00)
+        weekly = SubscriptionPlan(name="P-Weekly", code="P-W", billing_interval="weekly", base_price=50.00)
+        monthly = SubscriptionPlan(name="P-Monthly", code="P-M", billing_interval="monthly", base_price=200.00)
+        yearly = SubscriptionPlan(name="P-Yearly", code="P-Y", billing_interval="yearly", base_price=2000.00)
+
+        # Daily: 31 Oct + 1 day = 1 Nov 2026
+        assert daily.calculate_next_billing_date(start_date=ref_date) == date(2026, 11, 1)
+
+        # Weekly: 31 Oct + 7 days = 7 Nov 2026
+        assert weekly.calculate_next_billing_date(start_date=ref_date) == date(2026, 11, 7)
+
+        # Monthly: Next month (Nov 2026)
+        next_m = monthly.calculate_next_billing_date(start_date=ref_date)
+        assert next_m.month == 11
+        assert next_m.year == 2026
+
+        # Yearly: Next year (31 Oct 2027)
+        assert yearly.calculate_next_billing_date(start_date=ref_date) == date(2027, 10, 31)
+
+
+def test_quotation_and_subscription_bridge_apis(client, app):
+    with app.app_context():
+        prod = Product(name="POS Terminal", code="POS-TERM", base_price=2000.00, status=Product.STATUS_ACTIVE)
+        db.session.add(prod)
+        db.session.flush()
+
+        v = ProductVariant(product_id=prod.id, name="Touch Display", sku="POS-TOUCH", additional_price=560.00)
+        db.session.add(v)
+
+        plan = SubscriptionPlan(
+            name="POS Support Gold",
+            code="POS-GOLD-M",
+            base_price=500.00,
+            billing_interval="monthly",
+            minimum_quantity=2,
+            start_date=date.today(),
+            trial_days=14,
+            status="active"
+        )
+        db.session.add(plan)
+        db.session.commit()
+
+        prod_id = prod.id
+        var_id = v.id
+        plan_id = plan.id
+
+    # Test /api/quotations/calculate-line
+    # 2 units * (2000 + 560) = 5120
+    res = client.post('/products/api/quotations/calculate-line', json={
+        'product_id': prod_id,
+        'variant_id': var_id,
+        'quantity': 2
+    })
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data['unit_price'] == 2560.00
+    assert data['line_total'] == 5120.00
+    assert data['product_code'] == "POS-TERM"
+
+    # Test /api/subscriptions/prepare (Valid)
+    res = client.post('/products/api/subscriptions/prepare', json={
+        'plan_id': plan_id,
+        'quantity': 2,
+        'start_date': date.today().strftime('%Y-%m-%d')
+    })
+    assert res.status_code == 200
+    sub_data = res.get_json()
+    assert sub_data['valid'] is True
+    assert sub_data['order']['total_amount'] == 1000.00
+    assert sub_data['order']['trial_days'] == 14
+
+    # Test /api/subscriptions/prepare (Invalid quantity 1 < min 2)
+    res_fail = client.post('/products/api/subscriptions/prepare', json={
+        'plan_id': plan_id,
+        'quantity': 1
+    })
+    assert res_fail.status_code == 400
+    assert res_fail.get_json()['valid'] is False

@@ -954,3 +954,107 @@ def api_product_pricing(id):
         'margin_percentage': product.margin_percentage
     })
 
+
+# ==============================================================================
+# 5. QUOTATIONS & SUBSCRIPTIONS CONNECTOR APIs (for Sridhya - Member 3)
+# ==============================================================================
+
+@products_bp.route('/api/quotations/calculate-line', methods=['POST'])
+def api_calculate_quotation_line():
+    """
+    Computes quotation line item totals with variant prices and quantity.
+    Consumed by Sridhya's quotation creation workflow.
+    Body: {"product_id": 1, "variant_id": 2, "quantity": 3}
+    Formula: Line Total = (Base Price + Variant Additional Price) * Quantity.
+    """
+    payload = request.get_json(silent=True) or {}
+    product_id = payload.get('product_id')
+    variant_id = payload.get('variant_id')
+    raw_qty = payload.get('quantity', 1)
+
+    if not product_id:
+        return jsonify({'status': 'error', 'message': 'product_id is required'}), 400
+
+    product = db.session.get(Product, product_id)
+    if not product:
+        return jsonify({'status': 'error', 'message': 'Product not found'}), 404
+
+    try:
+        qty = int(raw_qty)
+        if qty < 1:
+            return jsonify({'status': 'error', 'message': 'Quantity must be at least 1'}), 400
+    except (ValueError, TypeError):
+        return jsonify({'status': 'error', 'message': 'Invalid quantity specified'}), 400
+
+    variant = None
+    if variant_id:
+        variant = ProductVariant.query.filter_by(id=variant_id, product_id=product.id).first()
+
+    base_price = float(product.base_price or 0.0)
+    variant_price = float(variant.additional_price or variant.price or 0.0) if variant else 0.0
+    unit_price = round(base_price + variant_price, 2)
+    line_total = round(unit_price * qty, 2)
+
+    return jsonify({
+        'status': 'success',
+        'product_id': product.id,
+        'product_name': product.name,
+        'product_code': product.code,
+        'variant_id': variant.id if variant else None,
+        'variant_name': variant.name if variant else None,
+        'base_price': base_price,
+        'variant_additional_price': variant_price,
+        'unit_price': unit_price,
+        'quantity': qty,
+        'line_total': line_total,
+        'product_status': product.status,
+        'is_available': (product.status == Product.STATUS_ACTIVE)
+    })
+
+
+@products_bp.route('/api/subscriptions/prepare', methods=['POST'])
+def api_prepare_subscription():
+    """
+    Validates a subscription order payload against plan availability, minimum quantity,
+    and returns calculated recurring amount, trial end date, and next billing date.
+    Consumed by Sridhya's subscription generator.
+    Body: {"plan_id": 1, "quantity": 2, "start_date": "2026-10-31"}
+    """
+    payload = request.get_json(silent=True) or {}
+    plan_id = payload.get('plan_id')
+    quantity = payload.get('quantity', 1)
+    start_date_str = payload.get('start_date')
+
+    if not plan_id:
+        return jsonify({'status': 'error', 'message': 'plan_id is required'}), 400
+
+    plan = db.session.get(SubscriptionPlan, plan_id)
+    if not plan:
+        return jsonify({'status': 'error', 'message': 'Subscription plan not found'}), 404
+
+    target_date = date.today()
+    if start_date_str:
+        try:
+            target_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'status': 'error', 'message': 'Invalid start_date format (use YYYY-MM-DD)'}), 400
+
+    order_validation = plan.validate_for_order(quantity=quantity, order_date=target_date)
+
+    if not order_validation['valid']:
+        return jsonify({
+            'status': 'invalid',
+            'valid': False,
+            'errors': order_validation['errors'],
+            'plan_id': plan.id,
+            'plan_name': plan.name,
+            'minimum_quantity': plan.minimum_quantity
+        }), 400
+
+    return jsonify({
+        'status': 'success',
+        'valid': True,
+        'order': order_validation
+    })
+
+
