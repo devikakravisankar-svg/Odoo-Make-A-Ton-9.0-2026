@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Brightloop Software - Subscription Management{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/billing.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="brand">
+                <span class="brand-logo">⚡</span>
+                <span class="brand-title">Brightloop <strong>Billing</strong></span>
+                <span class="brand-badge">Member 4</span>
+            </div>
+            <nav class="nav-links">
+                <a href="{{ url_for('discounts.list_discounts') }}" class="{% if request.blueprint == 'discounts' %}active{% endif %}">Discounts</a>
+                <a href="{{ url_for('payments.dashboard') }}" class="{% if request.blueprint == 'payments' and request.endpoint != 'payments.payment_history' %}active{% endif %}">Payments</a>
+                <a href="{{ url_for('payments.payment_history') }}" class="{% if request.endpoint == 'payments.payment_history' %}active{% endif %}">History</a>
+                <a href="{{ url_for('tracked_invoices.outstanding_invoices') }}" class="{% if request.endpoint == 'tracked_invoices.outstanding_invoices' %}active{% endif %}">Outstanding</a>
+                <a href="{{ url_for('tracked_invoices.overdue_invoices') }}" class="{% if request.endpoint == 'tracked_invoices.overdue_invoices' %}active{% endif %}">Overdue</a>
+                <a href="{{ url_for('reports.revenue_reports') }}" class="{% if request.blueprint == 'reports' %}active{% endif %}">Reports</a>
+            </nav>
+            <div class="nav-user">
+                <span class="user-role-badge {% if current_user and current_user.role == 'admin' %}badge-admin{% else %}badge-staff{% endif %}">
+                    {{ current_user.role|title if current_user else 'Admin' }}
+                </span>
+                <span class="user-name">{{ current_user.name if current_user else 'Admin User' }}</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <!-- Flash Notification Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages">
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                <span class="alert-icon">
+                                    {% if category == 'success' %}✓{% elif category == 'danger' %}⚠{% else %}ℹ{% endif %}
+                                </span>
+                                <span class="alert-text">{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-content">
+            <p>Brightloop Subscription Management System • Odoo Hackathon 2026</p>
+            <p class="footer-meta">MySQL Database • Python Flask • Discounts, Payments & Revenue Reports</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/billing.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "Edit Discount Rule" if discount else "Create Discount Rule" }} - Brightloop{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1>{{ "Edit Discount Rule: " ~ discount.name if discount else "Create Discount Rule" }}</h1>
+        <p>Set eligibility constraints, discount calculations, and product or subscription scope.</p>
+    </div>
+    <div class="header-actions">
+        <a href="{{ url_for('discounts.list_discounts') }}" class="btn btn-outline">Back to Discounts</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">Discount Configuration Form</span>
+        <span class="badge badge-admin">Admin Operation</span>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="form-grid">
+                <!-- Name -->
+                <div class="form-group">
+                    <label for="name">Discount Rule Name *</label>
+                    <input type="text" id="name" name="name" class="form-control" required 
+                           value="{{ discount.name if discount else '' }}" placeholder="e.g. Enterprise Volume 15% OFF">
+                </div>
+
+                <!-- Code -->
+                <div class="form-group">
+                    <label for="code">Promo Code (Optional)</label>
+                    <input type="text" id="code" name="code" class="form-control" 
+                           value="{{ discount.code if discount and discount.code else '' }}" placeholder="e.g. SAVE15 (Leave blank for automatic rule)">
+                    <small class="form-text">If left empty, this rule is auto-applied to eligible recurring invoices.</small>
+                </div>
+
+                <!-- Type -->
+                <div class="form-group">
+                    <label for="discount_type">Discount Type *</label>
+                    <select id="discount_type" name="discount_type" class="form-select" required>
+                        <option value="percentage" {% if discount and discount.discount_type == 'percentage' %}selected{% endif %}>Percentage (%)</option>
+                        <option value="fixed" {% if discount and discount.discount_type == 'fixed' %}selected{% endif %}>Fixed Amount ($)</option>
+                    </select>
+                </div>
+
+                <!-- Value -->
+                <div class="form-group">
+                    <label for="discount_value">Discount Value *</label>
+                    <input type="number" step="0.01" min="0.01" id="discount_value" name="discount_value" class="form-control" required
+                           value="{{ discount.discount_value if discount else '' }}" placeholder="e.g. 15.00">
+                    <small class="form-text">Either percentage (e.g. 15 for 15%) or dollar deduction (e.g. 50.00).</small>
+                </div>
+
+                <!-- Min Spend -->
+                <div class="form-group">
+                    <label for="min_purchase_amount">Minimum Purchase Amount ($)</label>
+                    <input type="number" step="0.01" min="0" id="min_purchase_amount" name="min_purchase_amount" class="form-control"
+                           value="{{ discount.min_purchase_amount if discount else '0.00' }}">
+                </div>
+
+                <!-- Min Quantity -->
+                <div class="form-group">
+                    <label for="min_quantity">Minimum Seats / Quantity</label>
+                    <input type="number" min="0" id="min_quantity" name="min_quantity" class="form-control"
+                           value="{{ discount.min_quantity if discount else '0' }}">
+                </div>
+
+                <!-- Start Date -->
+                <div class="form-group">
+                    <label for="start_date">Start Date *</label>
+                    <input type="date" id="start_date" name="start_date" class="form-control" required
+                           value="{{ discount.start_date.isoformat() if discount else '' }}">
+                </div>
+
+                <!-- End Date -->
+                <div class="form-group">
+                    <label for="end_date">End Date *</label>
+                    <input type="date" id="end_date" name="end_date" class="form-control" required
+                           value="{{ discount.end_date.isoformat() if discount else '' }}">
+                </div>
+
+                <!-- Max Usage -->
+                <div class="form-group">
+                    <label for="max_usage_limit">Maximum Usage Quota</label>
+                    <input type="number" min="1" id="max_usage_limit" name="max_usage_limit" class="form-control"
+                           value="{{ discount.max_usage_limit if discount and discount.max_usage_limit else '' }}" placeholder="Leave blank for unlimited">
+                </div>
+
+                <!-- Scope -->
+                <div class="form-group">
+                    <label for="discount-scope-select">Application Scope *</label>
+                    <select id="discount-scope-select" name="scope" class="form-select" required>
+                        <option value="subscription" {% if not discount or discount.scope == 'subscription' %}selected{% endif %}>
+                            Subscription-wide (Applies to invoice subtotal)
+                        </option>
+                        <option value="product" {% if discount and discount.scope == 'product' %}selected{% endif %}>
+                            Product-specific (Applies to specific line item)
+                        </option>
+                    </select>
+                </div>
+
+                <!-- Product Selector (Dynamic) -->
+                <div class="form-group" id="product-selector-group" style="display: none;">
+                    <label for="applicable_product_id">Applicable Product</label>
+                    <select id="applicable_product_id" name="applicable_product_id" class="form-select">
+                        <option value="">Select Target Product...</option>
+                        {% for prod in products %}
+                        <option value="{{ prod.id }}" {% if discount and discount.applicable_product_id == prod.id %}selected{% endif %}>
+                            {{ prod.name }} (${{ "{:,.2f}".format(prod.sales_price) }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Active Toggle -->
+                <div class="form-group" style="justify-content: center;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" name="is_active" value="1" {% if not discount or discount.is_active %}checked{% endif %}>
+                        <span>Rule is currently Active</span>
+                    </label>
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem;">
+                <button type="submit" class="btn btn-primary">
+                    {{ "Save Changes" if discount else "Create Discount Rule" }}
+                </button>
+                <a href="{{ url_for('discounts.list_discounts') }}" class="btn btn-outline">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
