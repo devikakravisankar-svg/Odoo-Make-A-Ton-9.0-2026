@@ -4,18 +4,18 @@ A modular, enterprise-grade Subscription Management System built with **Python F
 
 ---
 
-##  Team & Module Ownership
+## 👥 Team & Module Ownership
 
 | Member | Role | Assigned Modules & Scope |
 | :--- | :--- | :--- |
 | **Devika K** (Team Lead) | Foundation & Integration | Project factory, MySQL config, Auth, RBAC, Dashboard, Customer Portal, Team Blueprint Integration |
-| **Nidha Sherin K** | Core Catalog | Product Management, Product Variants, Subscription Plans (`app/blueprints/products/`) |
-| **Sridhya Deleep Kumar** | Order & Lifecycle | Quotations, Subscriptions lifecycle, Invoices & Line Items (`app/blueprints/subscriptions/`) |
-| **Fairooz Fizal Moilingantakath** | Finance & Reporting | Discounts/Coupons, Payment transactions, Taxes, Revenue Reports (`app/blueprints/billing/`) |
+| **Nidha** | Core Catalog | Product Management, Product Variants, Subscription Plans (`app/blueprints/products/`) |
+| **Sridhya** | Order & Lifecycle | Quotations, Subscriptions lifecycle, Invoices & Line Items (`app/blueprints/subscriptions/`) |
+| **Fairooz** | Finance & Reporting | Discounts/Coupons, Payment transactions, Taxes, Revenue Reports (`app/blueprints/billing/`) |
 
 ---
 
-##  Architecture & Shared Folder Structure
+## 🏗️ Architecture & Shared Folder Structure
 
 The application adopts the **Application Factory** pattern with modular Flask Blueprints:
 
@@ -74,7 +74,7 @@ Odoo-Make-A-Ton-9.0-2026/
 
 ---
 
-##  Shared Database Model Contracts
+## 🗄️ Shared Database Model Contracts
 
 All members must use these exact field names and types to ensure zero integration friction:
 
@@ -117,7 +117,7 @@ All members must use these exact field names and types to ensure zero integratio
 
 ---
 
-##  Security & Role-Based Access Control (RBAC)
+## 🔒 Security & Role-Based Access Control (RBAC)
 
 ### Password Complexity Rules
 Enforced both via frontend validation and backend validation (`app.utils.validators.validate_password_strength`):
@@ -133,7 +133,7 @@ Enforced both via frontend validation and backend validation (`app.utils.validat
 
 ---
 
-##  Getting Started
+## 🚀 Getting Started
 
 ### 1. Prerequisites
 - Python 3.10+
@@ -165,7 +165,7 @@ MAIL_PASSWORD=
 pip install -r requirements.txt
 ```
 
-### 4. Database Initialization & Seeding
+### 4. Database Verification, Initialization & Seeding
 Create MySQL database:
 ```sql
 CREATE DATABASE subscription_management_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -173,13 +173,16 @@ CREATE DATABASE subscription_management_db CHARACTER SET utf8mb4 COLLATE utf8mb4
 
 Run CLI commands:
 ```bash
-# 1. Create all MySQL tables
+# 1. Verify MySQL connection & PyMySQL driver
+flask check-db
+
+# 2. Create all MySQL tables
 flask init-db
 
-# 2. Seed initial Administrator account (admin / Admin@Odoo2026!)
+# 3. Seed initial Administrator account (admin / Admin@Odoo2026!)
 flask seed-admin
 
-# 3. Seed demo products, plans, and taxes
+# 4. Seed demo products, plans, and taxes
 flask seed-demo
 ```
 
@@ -191,21 +194,23 @@ Visit: `http://localhost:5000`
 
 ---
 
-##  Automated Testing
+## 🧪 Automated Testing
 
 Run the test suite with verbose output:
 ```bash
 pytest -v
 ```
-All 18 tests cover:
+All 21 tests cover:
 - Customer registration and password complexity validation
 - Login/logout and password reset token generation
 - RBAC permissions enforcement and customer data isolation
 - Full ORM model persistence and relational integrity
+- Admin-only staff account and discount rule creation
+- End-to-end customer subscription and invoice payment flow with live DB calculations
 
 ---
 
-##  Teammate Contribution Guidelines
+## 🤝 Teammate Contribution Guidelines
 
 1. **Work within your assigned directory**:
    - Nidha: `app/blueprints/products/`

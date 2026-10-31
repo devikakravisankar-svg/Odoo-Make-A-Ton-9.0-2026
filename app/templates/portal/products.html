@@ -27,7 +27,9 @@
             <p style="font-size: 0.8rem; color: var(--success); font-weight: 600; margin-bottom: 1rem;">✓ {{ plan.trial_days }} Days Free Trial included</p>
           {% endif %}
         </div>
-        <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="alert('Subscription request initiated! Sridhya\'s Quotation module will generate your order.')">Subscribe to Plan</button>
+        <form method="POST" action="{{ url_for('portal.subscribe', plan_id=plan.id) }}">
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Subscribe to Plan</button>
+        </form>
       </div>
     {% endfor %}
   </div>

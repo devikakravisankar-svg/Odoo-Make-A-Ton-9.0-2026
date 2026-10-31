@@ -93,5 +93,32 @@
       </tfoot>
     </table>
   </div>
+  {% if invoice.balance_due > 0 and invoice.status != 'cancelled' %}
+    <div style="margin-top: 2rem; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.5rem;">
+      <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--primary-color);">Make a Payment</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+        Outstanding balance: <strong>${{ "%.2f"|format(invoice.balance_due) }}</strong>
+      </p>
+
+      <form method="POST" action="{{ url_for('portal.pay_invoice', invoice_id=invoice.id) }}" style="max-width: 450px;">
+        <div class="form-group">
+          <label class="form-label" for="payment_method">Payment Method</label>
+          <select id="payment_method" name="payment_method" class="form-control">
+            <option value="card">Credit / Debit Card</option>
+            <option value="upi">UPI / Instant Pay</option>
+            <option value="bank_transfer">Direct Bank Transfer</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+          Confirm Payment of ${{ "%.2f"|format(invoice.balance_due) }}
+        </button>
+      </form>
+    </div>
+  {% else %}
+    <div style="margin-top: 1.5rem; padding: 1rem; background-color: #d1e7dd; border-radius: 6px; color: #0f5132; text-align: center; font-weight: 600;">
+      ✓ This invoice has been paid in full. No payment is required.
+    </div>
+  {% endif %}
 </div>
 {% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Manage Discount Rules{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <h1 style="font-size: 1.5rem; font-weight: 700;">Discount & Coupon Rules</h1>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">Admin-only management of system discount promotions</p>
+  </div>
+  <a href="{{ url_for('dashboard.create_discount') }}" class="btn btn-primary btn-sm">+ Add Discount Rule</a>
+</div>
+
+<div class="card">
+  {% if discounts %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Type</th>
+            <th>Value</th>
+            <th>Min Purchase</th>
+            <th>Validity</th>
+            <th>Usage</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in discounts %}
+            <tr>
+              <td><code><strong>{{ d.code }}</strong></code></td>
+              <td><span class="badge badge-info">{{ d.discount_type|capitalize }}</span></td>
+              <td>
+                <strong>
+                  {% if d.discount_type == 'percentage' %}{{ d.value }}%{% else %}${{ "%.2f"|format(d.value) }}{% endif %}
+                </strong>
+              </td>
+              <td>${{ "%.2f"|format(d.min_purchase_amount) }}</td>
+              <td>
+                {% if d.valid_from or d.valid_until %}
+                  {{ d.valid_from.strftime('%Y-%m-%d') if d.valid_from else 'Any' }} to {{ d.valid_until.strftime('%Y-%m-%d') if d.valid_until else 'No Exp' }}
+                {% else %}
+                  <span style="color: var(--text-muted);">Permanent</span>
+                {% endif %}
+              </td>
+              <td>{{ d.times_used }}{% if d.usage_limit %} / {{ d.usage_limit }}{% else %} (Unlimited){% endif %}</td>
+              <td>
+                <span class="badge {% if d.is_active %}badge-success{% else %}badge-danger{% endif %}">
+                  {{ 'Active' if d.is_active else 'Disabled' }}
+                </span>
+              </td>
+              <td>
+                <div style="display: flex; gap: 0.5rem;">
+                  <form method="POST" action="{{ url_for('dashboard.toggle_discount', discount_id=d.id) }}">
+                    <button type="submit" class="btn btn-outline btn-sm">
+                      {{ 'Disable' if d.is_active else 'Enable' }}
+                    </button>
+                  </form>
+                  <form method="POST" action="{{ url_for('dashboard.delete_discount', discount_id=d.id) }}" onsubmit="return confirm('Delete discount rule {{ d.code }}?');">
+                    <button type="submit" class="btn btn-sm" style="background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca;">Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p style="color: var(--text-muted); text-align: center; padding: 2rem 0;">No discount rules created yet. Click above to define your first coupon rule.</p>
+  {% endif %}
+</div>
+{% endblock %}
