@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block title %}{% if product %}Edit Product: {{ product.name }}{% else %}Add New Product{% endif %}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+  <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <div>
+      <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--dark-color);">
+        {% if product %}Edit Product: {{ product.name }}{% else %}Add New Product{% endif %}
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        Configure product catalog properties, sales & cost prices, and operational status.
+      </p>
+    </div>
+    <a href="{{ url_for('products.index') }}" class="btn btn-outline">&larr; Back to Catalog</a>
+  </div>
+
+  <div class="card">
+    <form method="POST" action="{% if product %}{{ url_for('products.edit_product', id=product.id) }}{% else %}{{ url_for('products.create_product') }}{% endif %}" id="product-form">
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.25rem;">
+        <div class="form-group">
+          <label class="form-label" for="prod-name">Product Name <span style="color: var(--danger);">*</span></label>
+          <input type="text" id="prod-name" name="name" class="form-control" required
+                 value="{{ form_data.get('name', product.name if product else '') }}" placeholder="e.g., Enterprise Cloud Storage">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prod-code">Product Code / SKU <span style="color: var(--danger);">*</span></label>
+          <input type="text" id="prod-code" name="code" class="form-control" required
+                 value="{{ form_data.get('code', product.code if product else '') }}" placeholder="e.g., CLOUD-ENT" style="text-transform: uppercase;">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+        <div class="form-group">
+          <label class="form-label" for="prod-type">Product Type <span style="color: var(--danger);">*</span></label>
+          <select id="prod-type" name="product_type" class="form-control">
+            {% for pt in product_types %}
+              <option value="{{ pt }}" {% if form_data.get('product_type', product.product_type if product else 'goods') == pt %}selected{% endif %}>
+                {{ pt|capitalize }}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="form-help">Select whether this is physical goods, a service, or a subscription item.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prod-status">Product Status <span style="color: var(--danger);">*</span></label>
+          <select id="prod-status" name="status" class="form-control">
+            {% for st in statuses %}
+              <option value="{{ st }}" {% if form_data.get('status', product.status if product else 'active') == st %}selected{% endif %}>
+                {{ st|capitalize }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Pricing and Gross Margin Calculator -->
+      <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem; margin-bottom: 1.25rem;">
+        <h4 style="font-size: 0.95rem; font-weight: 600; margin-bottom: 1rem; color: var(--dark-color);">Pricing & Profitability (INR ?)</h4>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 1.25rem; align-items: center;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="sales-price">Base Sales Price (?) <span style="color: var(--danger);">*</span></label>
+            <input type="number" step="0.01" min="0" id="sales-price" name="sales_price" class="form-control" required
+                   value="{{ form_data.get('sales_price', '%.2f'|format(product.base_price) if product else '0.00') }}">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="cost-price">Cost Price (?)</label>
+            <input type="number" step="0.01" min="0" id="cost-price" name="cost_price" class="form-control"
+                   value="{{ form_data.get('cost_price', '%.2f'|format(product.cost_price) if product else '0.00') }}">
+          </div>
+
+          <div style="background: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem; text-align: center;">
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Estimated Gross Margin</div>
+            <div id="margin-display" style="font-size: 1.25rem; font-weight: 700; color: var(--success);">?0.00</div>
+            <div id="margin-pct-display" style="font-size: 0.75rem; color: var(--text-muted);">0.0% markup</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="prod-desc">Public Description</label>
+        <textarea id="prod-desc" name="description" class="form-control" rows="3" placeholder="Customer-facing description of inclusions, features, or deliverables...">{{ form_data.get('description', product.description if product else '') }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="prod-notes">Internal Operational Notes</label>
+        <textarea id="prod-notes" name="notes" class="form-control" rows="2" placeholder="Internal fulfillment instructions, supplier notes, or billing constraints...">{{ form_data.get('notes', product.notes if product else '') }}</textarea>
+        <div class="form-help">Visible only to staff & admin users.</div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+        <a href="{{ url_for('products.index') }}" class="btn btn-outline">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          {% if product %}Update Product{% else %}Create Product{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const salesInput = document.getElementById('sales-price');
+  const costInput = document.getElementById('cost-price');
+  const marginDisplay = document.getElementById('margin-display');
+  const pctDisplay = document.getElementById('margin-pct-display');
+
+  function updateMargin() {
+    const sales = parseFloat(salesInput.value) || 0;
+    const cost = parseFloat(costInput.value) || 0;
+    const margin = sales - cost;
+    const pct = sales > 0 ? ((margin / sales) * 100).toFixed(1) : 0;
+
+    marginDisplay.textContent = '?' + margin.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    marginDisplay.style.color = margin >= 0 ? 'var(--success)' : 'var(--danger)';
+    pctDisplay.textContent = pct + '% margin';
+  }
+
+  if (salesInput && costInput) {
+    salesInput.addEventListener('input', updateMargin);
+    costInput.addEventListener('input', updateMargin);
+    updateMargin();
+  }
+</script>
+{% endblock %}

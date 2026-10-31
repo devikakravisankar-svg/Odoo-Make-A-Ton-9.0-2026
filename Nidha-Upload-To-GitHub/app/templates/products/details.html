@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+{% block title %}{{ product.name }} - Details{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+  <div>
+    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+      <h1 style="font-size: 1.75rem; font-weight: 700; color: var(--dark-color); margin: 0;">{{ product.name }}</h1>
+      <span style="font-family: monospace; font-size: 0.9rem; background: #e2e8f0; padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: 600;">
+        {{ product.code }}
+      </span>
+      {% if product.status == 'active' %}
+        <span class="badge badge-success">Active</span>
+      {% elif product.status == 'archived' %}
+        <span class="badge badge-warning">Archived</span>
+      {% else %}
+        <span class="badge badge-danger">Inactive</span>
+      {% endif %}
+      <span class="badge badge-info">{{ product.product_type|capitalize }}</span>
+    </div>
+    <p style="color: var(--text-muted); font-size: 0.9rem;">
+      Created on {{ product.created_at.strftime('%d %b %Y, %H:%M') if product.created_at else '?' }} &bull; Product ID: #{{ product.id }}
+    </p>
+  </div>
+
+  <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+    <a href="{{ url_for('products.product_variants', id=product.id) }}" class="btn btn-secondary">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: text-bottom; margin-right: 4px;"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+      Manage Variants ({{ variants|length }})
+    </a>
+    <a href="{{ url_for('products.edit_product', id=product.id) }}" class="btn btn-primary">Edit</a>
+    <form method="POST" action="{{ url_for('products.toggle_product_status', id=product.id) }}" style="display: inline;">
+      <button type="submit" class="btn btn-outline">
+        {% if product.status == 'active' %}Archive{% else %}Activate{% endif %}
+      </button>
+    </form>
+    <form method="POST" action="{{ url_for('products.delete_product', id=product.id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this product?');">
+      <button type="submit" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger);">Delete</button>
+    </form>
+  </div>
+</div>
+
+<!-- Financials & Profitability -->
+<div class="metrics-grid">
+  <div class="metric-card blue">
+    <div class="metric-label">Base Sales Price</div>
+    <div class="metric-value">?{{ "%.2f"|format(product.base_price) }}</div>
+    <div class="metric-sub">Catalog baseline before variant additions</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-label">Cost Price</div>
+    <div class="metric-value" style="color: #64748b;">?{{ "%.2f"|format(product.cost_price) }}</div>
+    <div class="metric-sub">Cost of goods or service provision</div>
+  </div>
+  <div class="metric-card {% if product.gross_margin >= 0 %}green{% else %}red{% endif %}">
+    <div class="metric-label">Gross Margin</div>
+    <div class="metric-value" style="color: {% if product.gross_margin >= 0 %}var(--success){% else %}var(--danger){% endif %};">
+      ?{{ "%.2f"|format(product.gross_margin) }}
+    </div>
+    <div class="metric-sub">{{ product.margin_percentage }}% profit margin</div>
+  </div>
+  <div class="metric-card amber">
+    <div class="metric-label">Variants Registered</div>
+    <div class="metric-value">{{ variants|length }}</div>
+    <div class="metric-sub">Custom tiers, sizes, or configurations</div>
+  </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+  <!-- Product Description & Overview -->
+  <div class="card">
+    <h3 class="card-title">Product Description</h3>
+    {% if product.description %}
+      <p style="white-space: pre-line; line-height: 1.7; color: #334155;">{{ product.description }}</p>
+    {% else %}
+      <p style="color: var(--text-muted); font-style: italic;">No public description provided for this product.</p>
+    {% endif %}
+  </div>
+
+  <!-- Operational Notes -->
+  <div class="card" style="background: #fffbeb; border-color: #fef3c7;">
+    <h3 class="card-title" style="color: #92400e; border-color: #fde68a;">Internal Notes</h3>
+    {% if product.notes %}
+      <p style="white-space: pre-line; font-size: 0.9rem; color: #78350f;">{{ product.notes }}</p>
+    {% else %}
+      <p style="color: #b45309; font-style: italic; font-size: 0.85rem;">No operational notes documented.</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Product Variants Section -->
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+    <div>
+      <h3 style="font-size: 1.15rem; font-weight: 600; margin: 0; color: var(--dark-color);">Product Variants & Calculated Prices</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;">
+        Final Price = Base Sales Price (?{{ "%.2f"|format(product.base_price) }}) + Additional Variant Price
+      </p>
+    </div>
+    <a href="{{ url_for('products.product_variants', id=product.id) }}" class="btn btn-secondary btn-sm">+ Add / Manage Variants</a>
+  </div>
+
+  {% if variants %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Variant Name</th>
+            <th>Attribute / Value</th>
+            <th>SKU</th>
+            <th style="text-align: right;">Additional Price</th>
+            <th style="text-align: right;">Final Price</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for var in variants %}
+            <tr>
+              <td><strong>{{ var.name }}</strong></td>
+              <td>
+                {% if var.variant_name or var.variant_value %}
+                  <span class="badge badge-info">{{ var.variant_name }}: {{ var.variant_value }}</span>
+                {% else %}
+                  <span style="color: var(--text-muted);">?</span>
+                {% endif %}
+              </td>
+              <td><span style="font-family: monospace;">{{ var.sku }}</span></td>
+              <td style="text-align: right; color: var(--primary-color); font-weight: 600;">
+                +?{{ "%.2f"|format(var.additional_price or var.price or 0.0) }}
+              </td>
+              <td style="text-align: right; font-weight: 700; color: var(--dark-color); font-size: 1rem;">
+                ?{{ "%.2f"|format(var.calculate_final_price()) }}
+              </td>
+              <td>
+                {% if var.is_active %}
+                  <span class="badge badge-success">Active</span>
+                {% else %}
+                  <span class="badge badge-warning">Disabled</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p style="color: var(--text-muted); text-align: center; padding: 1.5rem;">
+      No variants created for this product yet. All sales use the base price of ?{{ "%.2f"|format(product.base_price) }}.
+    </p>
+  {% endif %}
+</div>
+
+<!-- Linked Subscription Plans Section -->
+<div class="card">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+    <h3 style="font-size: 1.15rem; font-weight: 600; margin: 0; color: var(--dark-color);">Subscription Plans Linked to this Product</h3>
+    <a href="{{ url_for('products.create_plan') }}" class="btn btn-outline btn-sm">+ Create Plan</a>
+  </div>
+
+  {% if plans %}
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Plan Code</th>
+            <th>Plan Name</th>
+            <th>Billing Interval</th>
+            <th style="text-align: right;">Recurring Price</th>
+            <th>Min Quantity</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for plan in plans %}
+            <tr>
+              <td><span style="font-family: monospace; font-weight: 600;">{{ plan.code }}</span></td>
+              <td><strong>{{ plan.name }}</strong></td>
+              <td><span class="badge badge-info">{{ plan.billing_interval|capitalize }}</span></td>
+              <td style="text-align: right; font-weight: 600;">?{{ "%.2f"|format(plan.base_price) }}</td>
+              <td>{{ plan.minimum_quantity }} units</td>
+              <td>
+                {% if plan.status == 'active' %}
+                  <span class="badge badge-success">Active</span>
+                {% else %}
+                  <span class="badge badge-warning">{{ plan.status|capitalize }}</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p style="color: var(--text-muted); text-align: center; padding: 1.5rem;">
+      No specific recurring plans linked to this product. <a href="{{ url_for('products.create_plan') }}">Create one here</a>.
+    </p>
+  {% endif %}
+</div>
+{% endblock %}
