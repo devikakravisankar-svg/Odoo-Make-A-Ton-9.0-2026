@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice {{ invoice.invoice_number }} - Brightloop{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-title">
+        <h1>Invoice {{ invoice.invoice_number }}</h1>
+        <p>Customer: <strong>{{ invoice.customer.name }}</strong> ({{ invoice.customer.email }})</p>
+    </div>
+    <div class="header-actions">
+        {% if invoice.outstanding_amount > 0 %}
+        <a href="{{ url_for('payments.record_payment', invoice_id=invoice.id) }}" class="btn btn-secondary">
+            <span>💳</span> Record Payment
+        </a>
+        {% endif %}
+        <a href="{{ url_for('tracked_invoices.outstanding_invoices') }}" class="btn btn-outline">Back to Invoices</a>
+    </div>
+</div>
+
+<!-- Invoice Overview Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Invoice Total</span>
+            <span class="stat-icon">📄</span>
+        </div>
+        <div class="stat-value">${{ "{:,.2f}".format(invoice.total_amount) }}</div>
+        <div class="stat-subtitle">Due on {{ invoice.due_date.strftime('%b %d, %Y') }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Total Paid</span>
+            <span class="stat-icon">✅</span>
+        </div>
+        <div class="stat-value revenue">${{ "{:,.2f}".format(invoice.total_paid) }}</div>
+        <div class="stat-subtitle">{{ invoice.payments|length }} payment transaction(s)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Outstanding Balance</span>
+            <span class="stat-icon">⏳</span>
+        </div>
+        <div class="stat-value {% if invoice.outstanding_amount > 0 %}outstanding{% else %}revenue{% endif %}">
+            ${{ "{:,.2f}".format(invoice.outstanding_amount) }}
+        </div>
+        <div class="stat-subtitle">
+            Status: 
+            <span class="badge {% if invoice.payment_status == 'paid' %}badge-success{% elif invoice.payment_status == 'overdue' %}badge-danger{% elif invoice.payment_status == 'partially_paid' %}badge-warning{% else %}badge-secondary{% endif %}">
+                {{ invoice.payment_status|replace('_', ' ')|title }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Line Items -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">Invoice Line Items</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Product / Service</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in invoice.lines %}
+                <tr>
+                    <td>
+                        <strong>{{ line.product.name if line.product else 'Custom Item' }}</strong>
+                        {% if line.description %}
+                        <br><small style="color: var(--text-muted);">{{ line.description }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ line.quantity }}</td>
+                    <td>${{ "{:,.2f}".format(line.unit_price) }}</td>
+                    <td><strong>${{ "{:,.2f}".format(line.subtotal) }}</strong></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">
+                        No line items detailed for this invoice.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <!-- Applied Discounts & Application Form -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <span class="card-title">Discounts Applied</span>
+        </div>
+        <div class="card-body">
+            {% if invoice.applied_discounts %}
+            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.25rem;">
+                {% for ad in invoice.applied_discounts %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background: var(--success-bg); border-radius: var(--radius);">
+                    <div>
+                        <strong>{{ ad.discount.name }}</strong>
+                        <small style="color: var(--text-muted); display: block;">Applied {{ ad.applied_at.strftime('%b %d, %Y') }}</small>
+                    </div>
+                    <strong style="color: #1e7e34;">-${{ "{:,.2f}".format(ad.applied_amount) }}</strong>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">No discounts currently applied to this invoice.</p>
+            {% endif %}
+
+            <!-- Apply Eligible Discount Form -->
+            {% if eligible_discounts and invoice.status != 'paid' and invoice.outstanding_amount > 0 %}
+            <div style="border-top: 1px solid var(--border); padding-top: 1rem;">
+                <label style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; display: block;">Apply Eligible Discount:</label>
+                <form method="POST" action="{{ url_for('discounts.apply_discount') }}" style="display: flex; gap: 0.5rem;">
+                    <input type="hidden" name="invoice_id" value="{{ invoice.id }}">
+                    <select name="discount_id" class="form-select" style="flex: 1;" required>
+                        <option value="">Select an eligible rule...</option>
+                        {% for d in eligible_discounts %}
+                        <option value="{{ d.id }}">
+                            {{ d.name }} ({{ d.discount_value }}{{ '%' if d.discount_type == 'percentage' else '$' }} OFF)
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Payment Receipts On This Invoice -->
+    <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+            <span class="card-title">Recorded Payments ({{ invoice.payments|length }})</span>
+        </div>
+        <div class="card-body">
+            {% for pay in invoice.payments %}
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border);">
+                <div>
+                    <code>{{ pay.payment_reference }}</code>
+                    <small style="color: var(--text-muted); display: block;">
+                        {{ pay.payment_date.strftime('%b %d, %Y') }} • {{ pay.payment_method.replace('_', ' ').title() }}
+                    </small>
+                </div>
+                <strong style="color: var(--success); font-size: 0.95rem;">
+                    +${{ "{:,.2f}".format(pay.amount) }}
+                </strong>
+            </div>
+            {% else %}
+            <p style="color: var(--text-muted); font-size: 0.85rem;">No payment transactions recorded yet.</p>
+            {% endfor %}
+
+            {% if invoice.outstanding_amount > 0 %}
+            <div style="margin-top: 1rem; text-align: right;">
+                <a href="{{ url_for('payments.record_payment', invoice_id=invoice.id) }}" class="btn btn-secondary btn-sm">
+                    + Record Payment
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

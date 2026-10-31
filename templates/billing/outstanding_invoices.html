@@ -81,7 +81,11 @@
             <tbody>
                 {% for inv in invoices %}
                 <tr>
-                    <td><strong>{{ inv.invoice_number }}</strong></td>
+                    <td>
+                        <a href="{{ url_for('tracked_invoices.invoice_detail', invoice_id=inv.id) }}" style="color: var(--primary); text-decoration: underline;">
+                            <strong>{{ inv.invoice_number }}</strong>
+                        </a>
+                    </td>
                     <td>
                         {{ inv.customer.name }}<br>
                         <small style="color: var(--text-muted);">{{ inv.customer.email }}</small>
