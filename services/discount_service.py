@@ -90,7 +90,7 @@ class DiscountService:
             max_usage_limit=max_usage,
             current_usage_count=0,
             scope=scope,
-            applicable_product_id=applicable_product_id if scope == 'product' else None,
+            applicable_product_id=int(applicable_product_id) if (scope == 'product' and applicable_product_id) else None,
             is_active=bool(data.get('is_active', True))
         )
 
@@ -157,7 +157,7 @@ class DiscountService:
 
     @staticmethod
     def toggle_status(discount_id, current_user=None):
-        """Enables or disables a discount rule."""
+        """Enables or disables a discount rule (Admin only)."""
         if current_user and not current_user.is_admin():
             raise DiscountValidationError("Access Denied: Only Admin can toggle discount status.")
 
@@ -168,6 +168,60 @@ class DiscountService:
         discount.is_active = not discount.is_active
         db.session.commit()
         return discount
+
+    @staticmethod
+    def get_eligible_discounts_for_invoice(invoice):
+        """
+        Returns all discounts currently eligible for a given invoice:
+        - Active rule
+        - Within valid date window (start_date <= invoice_date <= end_date)
+        - Not exceeded max usage limit
+        - Satisfies min purchase amount & min line quantity
+        - Scope matches (subscription-wide, or matching product exists on invoice)
+        - Not already applied to this invoice
+        """
+        all_discounts = Discount.query.filter_by(is_active=True).all()
+        already_applied_ids = {ad.discount_id for ad in invoice.applied_discounts}
+        
+        eligible = []
+        for d in all_discounts:
+            if d.id in already_applied_ids:
+                continue
+            
+            # Check eligibility
+            if d.scope == 'product':
+                matching_lines = [l for l in invoice.lines if l.product_id == d.applicable_product_id]
+                if not matching_lines:
+                    continue
+                prod_subtotal = sum((l.subtotal for l in matching_lines), Decimal('0.00'))
+                prod_qty = sum((l.quantity for l in matching_lines), 0)
+                is_valid, _ = d.validate_eligibility(prod_subtotal, prod_qty, d.applicable_product_id, invoice.invoice_date)
+            else:
+                total_qty = sum((l.quantity for l in invoice.lines), 0)
+                is_valid, _ = d.validate_eligibility(invoice.subtotal, total_qty, reference_date=invoice.invoice_date)
+            
+            if is_valid:
+                eligible.append(d)
+        return eligible
+
+    @staticmethod
+    def apply_automatic_discounts_to_invoice(invoice):
+        """
+        Automatically finds and applies all eligible auto-apply discounts
+        (e.g., promo rules with no code or global rules) to an invoice.
+        Stops once expired, exhausted, or when subtotal reaches zero.
+        """
+        eligible = DiscountService.get_eligible_discounts_for_invoice(invoice)
+        applied_results = []
+        for disc in eligible:
+            # Auto-applied rules: rules without a specific promo code or marked automatic
+            if not disc.code or disc.code.startswith('AUTO'):
+                try:
+                    invoice, deduction = DiscountService.apply_discount_to_invoice(invoice, disc)
+                    applied_results.append((disc, deduction))
+                except DiscountValidationError:
+                    continue
+        return invoice, applied_results
 
     @staticmethod
     def apply_discount_to_invoice(invoice, discount):
@@ -193,7 +247,9 @@ class DiscountService:
             # Find matching product line
             matching_lines = [l for l in invoice.lines if l.product_id == discount.applicable_product_id]
             if not matching_lines:
-                raise DiscountValidationError(f"Discount '{discount.name}' applies only to product ID {discount.applicable_product_id}, which is not on this invoice.")
+                raise DiscountValidationError(
+                    f"Discount '{discount.name}' applies only to product ID {discount.applicable_product_id}, which is not on this invoice."
+                )
             
             product_subtotal = sum((l.subtotal for l in matching_lines), Decimal('0.00'))
             product_qty = sum((l.quantity for l in matching_lines), 0)
